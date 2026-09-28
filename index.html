@@ -230,7 +230,7 @@ tr:hover td{background:#fafcff;}
     </nav>
     <div class="sidebar-foot">
       <div><span class="status-dot"></span>DWS 连接器已就绪</div>
-      <div style="margin-top:4px;">由千问办公驱动执行</div>
+      <div id="bridge-status" style="margin-top:4px;">检测本地桥…</div>
       <div style="margin-top:8px;"><a href="javascript:logout()" style="color:var(--dt-text-sub);text-decoration:underline;">退出登录</a></div>
     </div>
   </aside>
@@ -307,7 +307,10 @@ tr:hover td{background:#fafcff;}
             </table>
           </div>
           <div class="panel-body" style="display:flex;justify-content:flex-end;">
-            <button class="btn btn-primary" onclick="openTaskpack('push')">⚙️ 生成推送任务包</button>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button class="btn btn-primary" onclick="directSendAll()">🚀 直连发送（免回填）</button>
+            <button class="btn btn-ghost" onclick="openTaskpack('push')">⚙️ ⚙️ 生成任务包</button>
+          </div>
           </div>
         </div>
       </section>
@@ -343,9 +346,9 @@ tr:hover td{background:#fafcff;}
           <div class="panel-head">
             <h2>🎙️ 会议速记库</h2>
             <div class="actions">
-              <button class="btn btn-primary btn-sm" onclick="openTaskpack('recordStart')">🎙️ 开始速记</button>
-              <button class="btn btn-ghost btn-sm" onclick="openTaskpack('recordStop')">⏹️ 结束速记</button>
-              <button class="btn btn-ghost btn-sm" onclick="openTaskpack('fetchMinutes')">🔄 拉取钉钉听记</button>
+              <button class="btn btn-primary btn-sm" onclick="smartRecordStart()">🎙️ 开始速记</button>
+              <button class="btn btn-ghost btn-sm" onclick="smartRecordStop()">⏹️ 结束速记</button>
+              <button class="btn btn-ghost btn-sm" onclick="smartFetchMinutes()">🔄 拉取钉钉听记</button>
               <button class="btn btn-ghost btn-sm" onclick="openMinuteAdd()">＋ 手动添加速记</button>
               <button class="btn btn-ghost btn-sm" onclick="openBackfill()">📥 回填结果</button>
             </div>
@@ -1062,11 +1065,25 @@ function confirmTodoAdd(){
   const title=document.getElementById('td-title').value.trim();
   if(!title){toast('请填写待办标题','error');return;}
   const c=store.contacts[+document.getElementById('td-person').value];
-  store.todos.push({id:uid('t'),name:c.name,mobile:c.mobile||'',title,
+  const t={id:uid('t'),name:c.name,mobile:c.mobile||'',title,
     due:document.getElementById('td-due').value,pri:document.getElementById('td-pri').value,
-    note:document.getElementById('td-note').value.trim(),status:'待创建'});
-  save();closeModal('m-todo-add');renderTodos();
-  toast('已加入待创建清单，点击页面下方按钮生成任务包','success');
+    note:document.getElementById('td-note').value.trim(),status:'待创建'};
+  if(bridgeOnline){
+    (async()=>{
+      try{
+        await directCreateTodo(t);
+        t.status='已创建';
+        store.todos.push(t);save();closeModal('m-todo-add');renderTodos();
+        toast('已通过钉钉直接创建待办（免回填）','success');
+      }catch(e){
+        store.todos.push(t);save();closeModal('m-todo-add');renderTodos();
+        toast('直连创建失败（'+(e.message||e)+'），已存入待创建清单，可用任务包模式','error');
+      }
+    })();
+  }else{
+    store.todos.push(t);save();closeModal('m-todo-add');renderTodos();
+    toast('已加入待创建清单，点击页面下方按钮生成任务包','success');
+  }
 }
 function renderTodos(){
   const tb=document.getElementById('todos-tbody');
@@ -1214,8 +1231,118 @@ function logout(){
   location.reload();
 }
 
+
+/* ================= 本地直连桥 ================= */
+const BRIDGE_BASE='http://127.0.0.1:8765';
+let bridgeOnline=false;
+async function bFetch(path){
+  const r=await fetch(BRIDGE_BASE+path);
+  const j=await r.json();
+  if(!j.ok) throw new Error((j.data&&(j.data.error||j.data.message))||('接口返回异常'));
+  return j;
+}
+async function pingBridge(){
+  try{const j=await bFetch('/api/ping');bridgeOnline=!!(j&&j.ok);}catch(e){bridgeOnline=false;}
+  const el=document.getElementById('bridge-status');
+  if(el) el.innerHTML=bridgeOnline
+    ?'<span style="color:var(--dt-success);">●</span> 本地直连已启用（免回填）'
+    :'<span style="color:var(--dt-text-sub);">●</span> 本地桥未运行（回填模式）';
+}
+async function bFindUser(name,mobile){
+  const q=mobile?('/api/find-user?mobile='+encodeURIComponent(mobile)):('/api/find-user?name='+encodeURIComponent(name));
+  const j=await bFetch(q);
+  const d=j.data;
+  if(mobile){
+    if(d&&d.result&&d.result.userId) return {userId:d.result.userId,name:d.result.orgUserName};
+    throw new Error('手机号未匹配到用户');
+  }
+  const arr=d&&d.result;
+  if(Array.isArray(arr)&&arr.length===1) return {userId:arr[0].userId,name:arr[0].title||arr[0].name||name};
+  if(Array.isArray(arr)&&arr.length>1) throw new Error('同名多人，请补充手机号消歧');
+  throw new Error('未找到该用户');
+}
+/* 直连发送推送 */
+async function directSendAll(){
+  if(!pushRows.length){toast('请先选择收件人','error');return;}
+  if(!bridgeOnline){toast('本地桥未运行，请先双击 bridge/启动本地桥.bat（当前可用「生成任务包」模式）','error');return;}
+  if(!confirm('将直接向 '+pushRows.length+' 位收件人发送钉钉单聊消息，确定发送？'))return;
+  let ok=0,fail=0;const fails=[];
+  for(const r of pushRows){
+    const {msg}=renderMsg(r);
+    const link=normLink(document.getElementById('tpl-link').value);
+    const content=(msg+(link?'\n'+link:'')).trim();
+    if(!content){store.history.push({time:nowStr(),name:r.name,msg:'（无内容，未发送）',ok:false});fail++;fails.push(r.name+': 无内容');continue;}
+    try{
+      const u=await bFindUser(r.name,r.mobile);
+      await bFetch('/api/dm-send?to='+encodeURIComponent(u.name)+'&content='+encodeURIComponent(content));
+      store.history.push({time:nowStr(),name:r.name,msg:content,ok:true});ok++;
+    }catch(e){
+      store.history.push({time:nowStr(),name:r.name,msg:content,ok:false});fail++;fails.push(r.name+': '+(e.message||'发送失败'));
+    }
+  }
+  save();renderHistory();
+  toast('直连发送完成：成功 '+ok+'，失败 '+fail,fail?'error':'success');
+  if(fails.length) alert('失败明细：\n'+fails.join('\n'));
+}
+/* 直连创建待办 */
+async function directCreateTodo(t){
+  const u=await bFindUser(t.name,t.mobile);
+  let q='/api/todo-create?userId='+encodeURIComponent(u.userId)+'&title='+encodeURIComponent(t.title);
+  if(t.due) q+='&due='+encodeURIComponent(t.due);
+  q+='&priority='+({高:30,中:20,低:10}[t.pri]||20);
+  const j=await bFetch(q);
+  const d=j.data&&j.data.result;
+  if(!d||!d.taskId) throw new Error('创建返回异常');
+  return d.taskId;
+}
+/* 直连拉取听记（默认近7天） */
+function isoLocal(ts){
+  const d=new Date(ts),p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())+'+08:00';
+}
+async function smartFetchMinutes(){
+  if(!bridgeOnline){openTaskpack('fetchMinutes');return;}
+  toast('正在直连拉取最近 7 天听记…');
+  try{
+    const now=Date.now();
+    const j=await bFetch('/api/minutes-search?start='+encodeURIComponent(isoLocal(now-7*86400000))+'&end='+encodeURIComponent(isoLocal(now)));
+    const list=(j.data&&j.data.minutes)||[];
+    if(!list.length){toast('最近 7 天无新听记','success');return;}
+    const ids=list.map(m=>m.taskUuid).join(',');
+    const dj=await bFetch('/api/minutes-detail?ids='+encodeURIComponent(ids));
+    const results=(dj.data&&dj.data.results)||[];
+    let n=0;
+    results.forEach(res=>{
+      const b=(res.basic&&res.basic.result)||{};
+      const title=b.title||'未命名';
+      const start=b.startTime?new Date(b.startTime).toLocaleString('zh-CN',{hour12:false}):'';
+      if(store.minutes.some(m=>m.topic===title&&String(m.time)===String(start)))return;
+      const kw=((res.keywords&&res.keywords.result&&res.keywords.result.keywords)||[]).join(',');
+      const sum=(res.summary&&res.summary.result&&res.summary.result.fullSummary)||'';
+      const clean=sum.replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/<time[^>]*>|<\/time>/g,'').slice(0,1500);
+      store.minutes.push({id:uid('m'),time:start,topic:title,source:'钉钉AI听记',tags:kw,summary:clean,transcript:'',analysis:''});
+      n++;
+    });
+    save();renderMinutes();
+    toast('已直接导入 '+n+' 条速记（免回填）','success');
+  }catch(e){toast('拉取失败：'+(e.message||e),'error');}
+}
+async function smartRecordStart(){
+  if(!bridgeOnline){openTaskpack('recordStart');return;}
+  if(!confirm('将通过钉钉闪记直接开始录音，确定？'))return;
+  try{await bFetch('/api/record-start');toast('录音已启动（本机手机钉钉可查看）','success');}
+  catch(e){toast('启动失败：'+(e.message||e),'error');}
+}
+async function smartRecordStop(){
+  if(!bridgeOnline){openTaskpack('recordStop');return;}
+  if(!confirm('确定结束当前钉钉闪记录音？'))return;
+  try{const j=await bFetch('/api/record-stop');toast('录音已结束，转写完成后可点「拉取钉钉听记」','success');}
+  catch(e){toast('结束失败：'+(e.message||e),'error');}
+}
+
 /* ================= 初始化 ================= */
 if(!isLoggedIn()){showLogin();}
+pingBridge();
 document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 restorePushDraft();
 renderContacts();renderMinutes();renderTodos();renderHistory();
