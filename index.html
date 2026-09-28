@@ -22,6 +22,21 @@
 body{font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;background:var(--dt-bg);color:var(--dt-text);font-size:14px;}
 .app{display:flex;min-height:100vh;}
 
+/* ===== 登录页 ===== */
+#login-mask{position:fixed;inset:0;z-index:999;background:linear-gradient(160deg,#0e5fd8 0%,#1677ff 45%,#3fa0ff 100%);display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:#fff;border-radius:18px;padding:40px 36px;width:100%;max-width:380px;box-shadow:0 24px 70px rgba(0,0,0,.28);}
+.login-box .lb-logo{display:flex;align-items:center;gap:12px;margin-bottom:26px;}
+.login-box .lb-logo .logo-icon{width:44px;height:44px;border-radius:11px;font-size:22px;}
+.login-box .lb-logo b{font-size:17px;display:block;}
+.login-box .lb-logo span{font-size:12px;color:var(--dt-text-sub);}
+.login-box .field{margin-bottom:16px;}
+.login-box .field label{display:block;font-size:13px;font-weight:500;margin-bottom:7px;}
+.login-box .field input{width:100%;border:1px solid var(--dt-border);border-radius:9px;padding:11px 14px;font-size:14px;}
+.login-box .field input:focus{outline:none;border-color:var(--dt-blue);box-shadow:0 0 0 3px rgba(22,119,255,.13);}
+.login-box .btn-primary{width:100%;justify-content:center;padding:12px;font-size:14.5px;margin-top:6px;}
+.login-err{color:var(--dt-danger);font-size:12.5px;margin-top:10px;text-align:center;min-height:18px;}
+.login-tip{font-size:11.5px;color:var(--dt-text-sub);text-align:center;margin-top:18px;line-height:1.7;}
+
 /* ===== 侧边栏 ===== */
 .sidebar{width:224px;background:#fff;border-right:1px solid var(--dt-border);display:flex;flex-direction:column;flex-shrink:0;}
 .logo{display:flex;align-items:center;gap:10px;padding:20px 16px;border-bottom:1px solid var(--dt-border);}
@@ -176,6 +191,27 @@ tr:hover td{background:#fafcff;}
 </style>
 </head>
 <body>
+<!-- ===== 登录页 ===== -->
+<div id="login-mask" style="display:none;">
+  <div class="login-box">
+    <div class="lb-logo">
+      <div class="logo-icon">钉</div>
+      <div><b>钉钉办公交互中心</b><span>DingTalk Work Console</span></div>
+    </div>
+    <div class="field">
+      <label>用户名</label>
+      <input id="login-user" autocomplete="username" placeholder="请输入用户名">
+    </div>
+    <div class="field">
+      <label>密码</label>
+      <input id="login-pass" type="password" autocomplete="current-password" placeholder="请输入密码">
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">登 录</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-tip">仅限授权人员使用 · 数据保存在本机浏览器</div>
+  </div>
+</div>
+
 <div class="app">
 
   <!-- 侧边栏 -->
@@ -195,6 +231,7 @@ tr:hover td{background:#fafcff;}
     <div class="sidebar-foot">
       <div><span class="status-dot"></span>DWS 连接器已就绪</div>
       <div style="margin-top:4px;">由千问办公驱动执行</div>
+      <div style="margin-top:8px;"><a href="javascript:logout()" style="color:var(--dt-text-sub);text-decoration:underline;">退出登录</a></div>
     </div>
   </aside>
 
@@ -1150,7 +1187,36 @@ function doBackfill(){
   toast('回填完成','success');
 }
 
+/* ================= 登录 ================= */
+const AUTH_KEY='dwconsole_auth';
+const AUTH_SALT='dw2026';
+function hashStr(s){let h=5381;for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))>>>0;}return h.toString(16);}
+const AUTH_HASH=hashStr('刘佩龙|'+AUTH_SALT+'|'+hashStr('LPL1314'+AUTH_SALT));
+function isLoggedIn(){try{return sessionStorage.getItem(AUTH_KEY)==='1'||localStorage.getItem(AUTH_KEY)==='1';}catch(e){return false;}}
+function showLogin(){document.getElementById('login-mask').style.display='flex';}
+function doLogin(){
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-err');
+  if(hashStr(u+'|'+AUTH_SALT+'|'+hashStr(p+AUTH_SALT))===AUTH_HASH){
+    try{localStorage.setItem(AUTH_KEY,'1');}catch(e){}
+    document.getElementById('login-mask').style.display='none';
+    err.textContent='';
+    toast('欢迎回来，刘佩龙','success');
+  }else{
+    err.textContent='用户名或密码错误';
+    document.getElementById('login-pass').value='';
+  }
+}
+function logout(){
+  if(!confirm('确定退出登录？'))return;
+  try{localStorage.removeItem(AUTH_KEY);}catch(e){}
+  location.reload();
+}
+
 /* ================= 初始化 ================= */
+if(!isLoggedIn()){showLogin();}
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 restorePushDraft();
 renderContacts();renderMinutes();renderTodos();renderHistory();
 </script>
