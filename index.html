@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>钉钉办公交互中心</title>
+<style>
+:root{
+  --dt-blue:#1677ff;
+  --dt-blue-dark:#0e5fd8;
+  --dt-blue-light:#e8f3ff;
+  --dt-bg:#f5f7fa;
+  --dt-border:#e5e8ef;
+  --dt-text:#171a1d;
+  --dt-text-sub:#646a73;
+  --dt-success:#00b578;
+  --dt-warn:#ff8800;
+  --dt-danger:#fa5151;
+  --dt-radius:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;background:var(--dt-bg);color:var(--dt-text);font-size:14px;}
+.app{display:flex;min-height:100vh;}
+
+/* ===== 侧边栏 ===== */
+.sidebar{width:224px;background:#fff;border-right:1px solid var(--dt-border);display:flex;flex-direction:column;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:10px;padding:20px 16px;border-bottom:1px solid var(--dt-border);}
+.logo-icon{width:36px;height:36px;border-radius:9px;background:var(--dt-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;}
+.logo-text b{font-size:15px;display:block;}
+.logo-text span{font-size:11px;color:var(--dt-text-sub);}
+.nav{flex:1;padding:12px 8px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:8px;cursor:pointer;color:var(--dt-text-sub);margin-bottom:2px;transition:all .15s;font-weight:500;}
+.nav-item:hover{background:var(--dt-blue-light);color:var(--dt-blue);}
+.nav-item.active{background:var(--dt-blue-light);color:var(--dt-blue);font-weight:600;}
+.nav-item .ico{width:18px;text-align:center;font-size:15px;}
+.sidebar-foot{padding:14px 16px;border-top:1px solid var(--dt-border);font-size:11px;color:var(--dt-text-sub);line-height:1.7;}
+.sidebar-foot .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dt-success);margin-right:5px;}
+
+/* ===== 主区 ===== */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.topbar{height:56px;background:#fff;border-bottom:1px solid var(--dt-border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+.topbar h1{font-size:17px;font-weight:600;}
+.topbar .sub{font-size:12px;color:var(--dt-text-sub);margin-top:2px;}
+.btn{border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--dt-blue);color:#fff;}
+.btn-primary:hover{background:var(--dt-blue-dark);}
+.btn-ghost{background:#fff;color:var(--dt-text);border:1px solid var(--dt-border);}
+.btn-ghost:hover{border-color:var(--dt-blue);color:var(--dt-blue);}
+.btn-danger-ghost{background:#fff;color:var(--dt-danger);border:1px solid var(--dt-border);}
+.btn-danger-ghost:hover{border-color:var(--dt-danger);}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.content{flex:1;padding:24px;overflow-y:auto;}
+
+/* ===== 统计卡 ===== */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;}
+.stat-card{background:#fff;border-radius:var(--dt-radius);padding:16px;border:1px solid var(--dt-border);cursor:pointer;transition:box-shadow .15s;}
+.stat-card:hover{box-shadow:0 4px 14px rgba(22,119,255,.10);}
+.stat-card .label{font-size:12px;color:var(--dt-text-sub);margin-bottom:6px;}
+.stat-card .value{font-size:24px;font-weight:700;}
+.c-blue{color:var(--dt-blue)!important;}
+.c-green{color:var(--dt-success)!important;}
+.c-orange{color:var(--dt-warn)!important;}
+.c-red{color:var(--dt-danger)!important;}
+.c-gray{color:var(--dt-text-sub)!important;}
+
+/* ===== 面板/卡片 ===== */
+.panel{background:#fff;border-radius:var(--dt-radius);border:1px solid var(--dt-border);margin-bottom:18px;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--dt-border);gap:10px;flex-wrap:wrap;}
+.panel-head h2{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.panel-head .tag{font-size:11px;background:var(--dt-blue-light);color:var(--dt-blue);padding:2px 8px;border-radius:10px;font-weight:500;}
+.panel-head .actions{display:flex;gap:8px;flex-wrap:wrap;}
+.panel-body{padding:18px;}
+.hint{background:var(--dt-blue-light);border-radius:8px;padding:10px 14px;font-size:12.5px;color:var(--dt-blue-dark);line-height:1.7;margin-bottom:14px;}
+.hint b{font-weight:600;}
+
+/* ===== 表单 ===== */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-grid .full{grid-column:1 / -1;}
+.field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;}
+.field label .req{color:var(--dt-danger);margin-left:2px;}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--dt-border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;background:#fff;color:var(--dt-text);transition:border .15s;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--dt-blue);box-shadow:0 0 0 2px rgba(22,119,255,.12);}
+.field textarea{resize:vertical;min-height:72px;line-height:1.6;}
+.field .tip{font-size:11.5px;color:var(--dt-text-sub);margin-top:4px;line-height:1.6;}
+.field .tip code{background:var(--dt-bg);padding:1px 5px;border-radius:4px;font-size:11px;}
+
+/* ===== 表格 ===== */
+table{width:100%;border-collapse:collapse;}
+th{font-size:12px;color:var(--dt-text-sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--dt-border);font-weight:500;background:#fafbfc;white-space:nowrap;}
+td{padding:10px 12px;border-bottom:1px solid var(--dt-border);font-size:13px;vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafcff;}
+.pill{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11.5px;font-weight:500;white-space:nowrap;}
+.pill-blue{background:var(--dt-blue-light);color:var(--dt-blue);}
+.pill-green{background:#e6f7ef;color:var(--dt-success);}
+.pill-gray{background:#f0f2f5;color:var(--dt-text-sub);}
+.pill-orange{background:#fff3e0;color:var(--dt-warn);}
+.pill-red{background:#ffecec;color:var(--dt-danger);}
+.msg-preview{max-width:420px;white-space:pre-wrap;word-break:break-all;line-height:1.55;color:var(--dt-text);font-size:12.5px;}
+.link-badge{color:var(--dt-blue);font-size:11px;background:var(--dt-blue-light);padding:1px 7px;border-radius:4px;margin-top:4px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.empty{padding:40px;text-align:center;color:var(--dt-text-sub);font-size:13px;}
+.empty .big{font-size:34px;margin-bottom:10px;opacity:.5;}
+.var-input{width:90px;border:1px solid var(--dt-border);border-radius:6px;padding:5px 8px;font-size:12.5px;}
+.var-input:focus{outline:none;border-color:var(--dt-blue);}
+.var-tag{display:inline-flex;align-items:center;gap:4px;background:var(--dt-blue-light);color:var(--dt-blue-dark);border-radius:6px;padding:3px 8px;font-size:12px;margin:0 6px 6px 0;}
+.var-tag .x{cursor:pointer;font-weight:700;color:var(--dt-danger);}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;}
+.filter-bar .field{min-width:140px;}
+.filter-bar .field input,.filter-bar .field select{padding:8px 10px;font-size:12.5px;}
+
+/* ===== 模态框 ===== */
+.modal-mask{position:fixed;inset:0;background:rgba(23,26,29,.45);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal-mask.show{display:flex;}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:900px;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal.modal-sm{max-width:520px;}
+.modal-head{padding:16px 22px;border-bottom:1px solid var(--dt-border);display:flex;justify-content:space-between;align-items:center;}
+.modal-head h3{font-size:16px;font-weight:600;}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--dt-text-sub);padding:4px 8px;border-radius:6px;}
+.modal-close:hover{background:var(--dt-bg);}
+.modal-body{padding:20px 22px;overflow-y:auto;}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--dt-border);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+.modal-foot .left-note{font-size:12px;color:var(--dt-text-sub);}
+
+/* ===== 任务包 ===== */
+.taskpack{background:#0d1117;color:#c9d1d9;border-radius:10px;padding:16px;font-family:Consolas,Monaco,monospace;font-size:12px;line-height:1.75;white-space:pre-wrap;word-break:break-all;max-height:320px;overflow-y:auto;}
+
+/* ===== 复选列表 ===== */
+.ck-list{max-height:320px;overflow-y:auto;border:1px solid var(--dt-border);border-radius:8px;}
+.ck-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--dt-border);cursor:pointer;font-size:13px;}
+.ck-item:last-child{border-bottom:none;}
+.ck-item:hover{background:#fafcff;}
+.ck-item input{width:16px;height:16px;accent-color:var(--dt-blue);}
+.ck-item .nm{font-weight:600;min-width:70px;}
+.ck-item .mt{color:var(--dt-text-sub);font-size:12px;}
+
+/* ===== 速记卡片 ===== */
+.minute-card{border:1px solid var(--dt-border);border-radius:10px;padding:16px;margin-bottom:12px;transition:box-shadow .15s;}
+.minute-card:hover{box-shadow:0 4px 14px rgba(22,119,255,.08);}
+.minute-card .mc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+.minute-card h3{font-size:14.5px;font-weight:600;margin-bottom:6px;}
+.minute-card .mc-meta{font-size:12px;color:var(--dt-text-sub);margin-bottom:8px;line-height:1.6;}
+.minute-card .mc-summary{font-size:12.5px;color:var(--dt-text);line-height:1.65;max-height:66px;overflow:hidden;position:relative;}
+.minute-card .mc-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.detail-block{background:var(--dt-bg);border-radius:8px;padding:14px;font-size:13px;line-height:1.75;margin-bottom:12px;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto;}
+.detail-block b{display:block;margin-bottom:6px;font-size:13px;color:var(--dt-text-sub);font-weight:500;}
+
+/* ===== Toast ===== */
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast-item{background:#fff;border-radius:8px;padding:10px 20px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.14);border-left:3px solid var(--dt-blue);animation:fadeIn .2s;}
+.toast-item.success{border-left-color:var(--dt-success);}
+.toast-item.error{border-left-color:var(--dt-danger);}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+
+/* ===== 使用流程 ===== */
+.flow-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.flow-step{background:#fff;border:1px solid var(--dt-border);border-radius:10px;padding:16px;}
+.flow-step .num{width:24px;height:24px;border-radius:50%;background:var(--dt-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-bottom:10px;}
+.flow-step b{display:block;font-size:13.5px;margin-bottom:6px;}
+.flow-step p{font-size:12px;color:var(--dt-text-sub);line-height:1.65;}
+.module-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+.module-card{border:1px solid var(--dt-border);border-radius:10px;padding:16px;background:#fff;}
+.module-card b{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:8px;}
+.module-card p{font-size:12px;color:var(--dt-text-sub);line-height:1.7;}
+
+.page{display:none;}
+.page.active{display:block;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:#d0d5dd;border-radius:4px;}
+
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .form-grid{grid-template-columns:1fr;}
+  .flow-steps{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 侧边栏 -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">钉</div>
+      <div class="logo-text"><b>钉钉办公交互中心</b><span>DingTalk Work Console</span></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="push"><span class="ico">📮</span>推送任务</div>
+      <div class="nav-item" data-page="contacts"><span class="ico">👥</span>联系人名单</div>
+      <div class="nav-item" data-page="minutes"><span class="ico">🎙️</span>会议速记</div>
+      <div class="nav-item" data-page="todos"><span class="ico">✅</span>待办管理</div>
+      <div class="nav-item" data-page="history"><span class="ico">📋</span>发送历史</div>
+      <div class="nav-item" data-page="guide"><span class="ico">📖</span>使用说明</div>
+    </nav>
+    <div class="sidebar-foot">
+      <div><span class="status-dot"></span>DWS 连接器已就绪</div>
+      <div style="margin-top:4px;">由千问办公驱动执行</div>
+    </div>
+  </aside>
+
+  <!-- 主区 -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="page-title">推送任务</h1>
+        <div class="sub" id="page-sub"></div>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ================= 推送任务 ================= -->
+      <section class="page active" id="page-push">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>👥 选择收件人</h2>
+            <div class="actions">
+              <button class="btn btn-primary btn-sm" onclick="openPickContacts()">从联系人选择</button>
+              <button class="btn btn-ghost btn-sm" onclick="openImportRoster()">按格式粘贴</button>
+              <button class="btn btn-danger-ghost btn-sm" onclick="clearPushRows()">清空收件人</button>
+            </div>
+          </div>
+          <div class="panel-body" id="push-rows-zone">
+            <div class="empty"><div class="big">👥</div>尚未选择收件人，点击「从联系人选择」或「按格式粘贴」<br><span style="font-size:12px;">粘贴格式：姓名 | 手机号 | 变量值1 | 变量值2 …（变量顺序与下方变量列一致）</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>✍️ 文案模板与变量</h2>
+            <span class="tag">支持模板变量</span>
+          </div>
+          <div class="panel-body">
+            <div class="hint">统一文案中用 <b>{姓名}</b> 和自定义变量（如 <b>{成绩}</b>）占位，每位收件人的变量值不同，生成的消息就不同。某个人需要完全不同的文案时，在收件人列表中单独「覆盖内容」。</div>
+            <div class="form-grid">
+              <div class="field full">
+                <label>文案模板<span class="req">*</span></label>
+                <textarea id="tpl-msg" rows="3" placeholder="例如：您好 {姓名}，本次信息安全考试你的成绩为 {成绩} 分，请查收详情。"></textarea>
+                <div class="tip">可用变量：<code>{姓名}</code> + 下方自定义变量</div>
+              </div>
+              <div class="field">
+                <label>附加链接（全员相同，选填）</label>
+                <input id="tpl-link" placeholder="https://...">
+              </div>
+              <div class="field">
+                <label>自定义变量列</label>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <div id="var-tags" style="flex:1;"></div>
+                  <button class="btn btn-ghost btn-sm" type="button" onclick="addVarCol()">＋ 添加变量</button>
+                </div>
+                <div class="tip">例如添加「成绩」，模板中即可用 <code>{成绩}</code>，收件人列表会出现可编辑的成绩列</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+              <button class="btn btn-primary" onclick="renderPushTable()">刷新预览</button>
+              <button class="btn btn-ghost" onclick="savePushDraft()">保存草稿</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="push-preview-panel" style="display:none;">
+          <div class="panel-head">
+            <h2>👁️ 发送预览</h2>
+            <span class="tag" id="push-preview-count"></span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th style="width:44px;">#</th><th style="width:110px;">收件人</th><th style="width:120px;">手机号</th><th>最终消息内容</th><th style="width:150px;">操作</th></tr></thead>
+              <tbody id="push-preview-tbody"></tbody>
+            </table>
+          </div>
+          <div class="panel-body" style="display:flex;justify-content:flex-end;">
+            <button class="btn btn-primary" onclick="openTaskpack('push')">⚙️ 生成推送任务包</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 联系人名单 ================= -->
+      <section class="page" id="page-contacts">
+        <div class="stats">
+          <div class="stat-card" onclick="openImportContacts()"><div class="label">批量导入</div><div class="value c-blue">📥</div></div>
+          <div class="stat-card" onclick="exportContacts('txt')"><div class="label">导出 TXT</div><div class="value c-green">📄</div></div>
+          <div class="stat-card" onclick="exportContacts('csv')"><div class="label">导出 CSV</div><div class="value c-green">📊</div></div>
+          <div class="stat-card"><div class="label">联系人总数</div><div class="value c-orange" id="contacts-total">0</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>👥 常用联系人</h2>
+            <div class="actions">
+              <button class="btn btn-primary btn-sm" onclick="openContactEdit(-1)">＋ 新建联系人</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th style="width:110px;">姓名</th><th style="width:130px;">手机号</th><th style="width:140px;">部门</th><th>备注</th><th style="width:150px;">操作</th></tr></thead>
+              <tbody id="contacts-tbody"></tbody>
+            </table>
+          </div>
+          <div class="panel-body" style="font-size:12px;color:var(--dt-text-sub);">联系人保存在本机浏览器；同名联系人建议必填手机号，推送时按手机号精确匹配。行内「引用」将此人加入当前推送名单。</div>
+        </div>
+      </section>
+
+      <!-- ================= 会议速记 ================= -->
+      <section class="page" id="page-minutes">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>🎙️ 会议速记库</h2>
+            <div class="actions">
+              <button class="btn btn-primary btn-sm" onclick="openTaskpack('fetchMinutes')">🔄 拉取钉钉听记</button>
+              <button class="btn btn-ghost btn-sm" onclick="openMinuteAdd()">＋ 手动添加速记</button>
+              <button class="btn btn-ghost btn-sm" onclick="openBackfill()">📥 回填结果</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="filter-bar">
+              <div class="field"><label>开始日期</label><input type="date" id="mf-start"></div>
+              <div class="field"><label>结束日期</label><input type="date" id="mf-end"></div>
+              <div class="field"><label>关键词/主题</label><input id="mf-kw" placeholder="如：安全评审、周会"></div>
+              <div class="field"><label>来源</label><select id="mf-src"><option value="">全部</option><option value="钉钉AI听记">钉钉AI听记</option><option value="手动添加">手动添加</option></select></div>
+              <button class="btn btn-primary btn-sm" onclick="renderMinutes()">筛选</button>
+              <button class="btn btn-ghost btn-sm" onclick="resetMinuteFilter()">重置</button>
+            </div>
+            <div id="minutes-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 待办管理 ================= -->
+      <section class="page" id="page-todos">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>✅ 钉钉待办</h2>
+            <div class="actions">
+              <button class="btn btn-primary btn-sm" onclick="openTodoAdd()">＋ 新建待办</button>
+              <button class="btn btn-ghost btn-sm" onclick="openTaskpack('syncTodos')">🔄 同步钉钉待办</button>
+              <button class="btn btn-ghost btn-sm" onclick="openBackfill()">📥 回填结果</button>
+            </div>
+          </div>
+          <div class="panel-body" style="padding-bottom:0;">
+            <div class="hint" style="margin-bottom:12px;">本地配置待办清单 → 生成任务包发给千问办公 → 由它通过钉钉创建/修改/删除真实待办 → 结果回填本平台。</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th style="width:110px;">执行人</th><th>标题</th><th style="width:150px;">截止时间</th><th style="width:70px;">优先级</th><th style="width:80px;">状态</th><th style="width:190px;">操作</th></tr></thead>
+              <tbody id="todos-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 发送历史 ================= -->
+      <section class="page" id="page-history">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>📋 发送历史</h2>
+            <div class="actions">
+              <button class="btn btn-ghost btn-sm" onclick="openBackfill()">📥 回填结果</button>
+              <button class="btn btn-danger-ghost btn-sm" onclick="clearHistory()">清空历史</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th style="width:140px;">时间</th><th style="width:100px;">收件人</th><th>消息内容</th><th style="width:70px;">状态</th></tr></thead>
+              <tbody id="history-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 使用说明 ================= -->
+      <section class="page" id="page-guide">
+        <div class="panel">
+          <div class="panel-head"><h2>📖 平台模块</h2></div>
+          <div class="panel-body">
+            <div class="module-cards">
+              <div class="module-card"><b>📮 推送任务</b><p>模板+变量实现「统一文案、每人不同」（如考试成绩）：添加「成绩」变量列，模板写 {姓名}、{成绩}，每人填各自的值。个别特殊的人可用「覆盖内容」。</p></div>
+              <div class="module-card"><b>👥 联系人名单</b><p>批量导入/导出（TXT/CSV）、新建、编辑、删除；推送时直接勾选引用。</p></div>
+              <div class="module-card"><b>🎙️ 会议速记</b><p>生成任务包让千问办公拉取钉钉 AI 听记并回填本平台；也可手动粘贴纪要。支持按时间、主题、来源筛选，AI 分析生成要点与行动项。</p></div>
+              <div class="module-card"><b>✅ 待办管理</b><p>为联系人配置钉钉待办（标题/截止/优先级），通过任务包创建；修改、删除同样走任务包；支持同步钉钉待办列表。</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>🔁 标准工作闭环</h2></div>
+          <div class="panel-body">
+            <div class="flow-steps">
+              <div class="flow-step"><div class="num">1</div><b>平台上配置</b><p>选收件人、填模板和变量，或配置待办、拉取速记。</p></div>
+              <div class="flow-step"><div class="num">2</div><b>生成任务包</b><p>点击对应按钮，一键复制结构化指令。</p></div>
+              <div class="flow-step"><div class="num">3</div><b>发给千问办公</b><p>粘贴到千问办公对话，它匹配钉钉用户并执行，向你确认后操作。</p></div>
+              <div class="flow-step"><div class="num">4</div><b>回填平台</b><p>千问办公执行后返回「回填码」，在对应模块点「回填结果」粘贴导入。</p></div>
+            </div>
+            <div class="hint" style="margin-top:16px;margin-bottom:0;"><b>回填码格式</b>：包含 <b>【回填:history】</b>（发送结果）、<b>【回填:minutes】</b>（速记）、<b>【回填:analysis】</b>（速记分析）、<b>【回填:todos】</b>（待办状态）标记的文本，整段粘贴即可，平台自动识别分类导入。</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== 联系人选择弹窗 ===== -->
+<div class="modal-mask" id="m-pick">
+  <div class="modal">
+    <div class="modal-head"><h3>从联系人中选择收件人</h3><button class="modal-close" onclick="closeModal('m-pick')">✕</button></div>
+    <div class="modal-body">
+      <div style="margin-bottom:10px;display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="pickAll(true)">全选</button>
+        <button class="btn btn-ghost btn-sm" onclick="pickAll(false)">全不选</button>
+      </div>
+      <div class="ck-list" id="pick-list"></div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note" id="pick-note"></span>
+      <button class="btn btn-primary" onclick="confirmPick()">加入推送名单</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 粘贴收件人弹窗 ===== -->
+<div class="modal-mask" id="m-import-roster">
+  <div class="modal modal-sm">
+    <div class="modal-head"><h3>按格式粘贴收件人</h3><button class="modal-close" onclick="closeModal('m-import-roster')">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>每行一条，竖线分隔</label>
+        <textarea id="roster-paste" rows="7" placeholder="刘佩龙 | 13336011475 | 92
+张三 | 13800000000 | 85"></textarea>
+        <div class="tip">列顺序：姓名 | 手机号（选填） | 变量列1 | 变量列2 …（变量顺序与「自定义变量列」一致，无变量列时只填姓名和手机号）</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note">将追加到当前名单</span>
+      <button class="btn btn-primary" onclick="confirmImportRoster()">导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 联系人编辑弹窗 ===== -->
+<div class="modal-mask" id="m-contact">
+  <div class="modal modal-sm">
+    <div class="modal-head"><h3 id="contact-edit-title">新建联系人</h3><button class="modal-close" onclick="closeModal('m-contact')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>姓名<span class="req">*</span></label><input id="c-name"></div>
+        <div class="field"><label>手机号</label><input id="c-mobile" placeholder="11位，同名消歧用"></div>
+        <div class="field"><label>部门</label><input id="c-dept"></div>
+        <div class="field"><label>备注</label><input id="c-note"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note"></span>
+      <button class="btn btn-primary" onclick="saveContactEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 联系人批量导入弹窗 ===== -->
+<div class="modal-mask" id="m-import-contacts">
+  <div class="modal">
+    <div class="modal-head"><h3>批量导入联系人</h3><button class="modal-close" onclick="closeModal('m-import-contacts')">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>粘贴名单（每行一条）</label>
+        <textarea id="contacts-paste" rows="8" placeholder="刘佩龙 | 13336011475 | 安全事业部 | 安全工程师
+张三 | 13800000000 | 平台部"></textarea>
+        <div class="tip">列顺序：姓名 | 手机号（选填） | 部门（选填） | 备注（选填），用竖线分隔；与已有联系人「姓名+手机号」相同则跳过不重复导入</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note" id="import-note"></span>
+      <button class="btn btn-primary" onclick="confirmImportContacts()">导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 覆盖内容弹窗 ===== -->
+<div class="modal-mask" id="m-override">
+  <div class="modal modal-sm">
+    <div class="modal-head"><h3 id="override-title">覆盖内容</h3><button class="modal-close" onclick="closeModal('m-override')">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>该收件人的专属内容（留空则使用模板）</label>
+        <textarea id="override-text" rows="5"></textarea>
+        <div class="tip">此人的消息将完全使用这段内容，不套用模板</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note"></span>
+      <button class="btn btn-primary" onclick="confirmOverride()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 手动添加速记弹窗 ===== -->
+<div class="modal-mask" id="m-minute-add">
+  <div class="modal">
+    <div class="modal-head"><h3>手动添加速记</h3><button class="modal-close" onclick="closeModal('m-minute-add')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>主题<span class="req">*</span></label><input id="mi-topic" placeholder="如：Q3 安全评审会"></div>
+        <div class="field"><label>时间</label><input type="datetime-local" id="mi-time"></div>
+        <div class="field full"><label>标签（逗号分隔）</label><input id="mi-tags" placeholder="安全, 评审"></div>
+        <div class="field full"><label>摘要</label><textarea id="mi-summary" rows="3"></textarea></div>
+        <div class="field full"><label>完整内容 / 逐字稿</label><textarea id="mi-transcript" rows="6"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note"></span>
+      <button class="btn btn-primary" onclick="confirmMinuteAdd()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 速记详情弹窗 ===== -->
+<div class="modal-mask" id="m-minute-detail">
+  <div class="modal">
+    <div class="modal-head"><h3 id="md-title">速记详情</h3><button class="modal-close" onclick="closeModal('m-minute-detail')">✕</button></div>
+    <div class="modal-body">
+      <div class="detail-block" id="md-meta"></div>
+      <div class="detail-block"><b>摘要</b><span id="md-summary"></span></div>
+      <div class="detail-block"><b>完整内容 / 逐字稿</b><span id="md-transcript"></span></div>
+      <div class="detail-block" id="md-analysis-zone" style="display:none;"><b>AI 分析</b><span id="md-analysis"></span></div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note" id="md-note"></span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="openAnalysisTaskpack(curMinuteId)">🤖 生成 AI 分析任务包</button>
+        <button class="btn btn-danger-ghost" onclick="delMinute(curMinuteId)">删除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 新建待办弹窗 ===== -->
+<div class="modal-mask" id="m-todo-add">
+  <div class="modal modal-sm">
+    <div class="modal-head"><h3>新建钉钉待办</h3><button class="modal-close" onclick="closeModal('m-todo-add')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field full">
+          <label>执行人</label>
+          <select id="td-person"></select>
+          <div class="tip">从联系人名单选择；如需给其他人建待办，先在「联系人名单」添加</div>
+        </div>
+        <div class="field full"><label>待办标题<span class="req">*</span></label><input id="td-title" placeholder="如：提交 Q3 安全整改报告"></div>
+        <div class="field"><label>截止时间</label><input type="datetime-local" id="td-due"></div>
+        <div class="field"><label>优先级</label><select id="td-pri"><option>中</option><option>高</option><option>低</option></select></div>
+        <div class="field full"><label>备注/描述</label><textarea id="td-note" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note">保存后进入本地待创建清单，点「生成待办任务包」执行</span>
+      <button class="btn btn-primary" onclick="confirmTodoAdd()">加入清单</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 任务包弹窗 ===== -->
+<div class="modal-mask" id="m-taskpack">
+  <div class="modal">
+    <div class="modal-head"><h3>📦 任务包已生成</h3><button class="modal-close" onclick="closeModal('m-taskpack')">✕</button></div>
+    <div class="modal-body">
+      <div class="hint">复制下方全部内容，粘贴到<b>千问办公对话</b>中发送即开始执行；完成后它会返回「回填码」，回到本平台点「📥 回填结果」粘贴导入。</div>
+      <div class="taskpack" id="taskpack-content"></div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note" id="taskpack-note"></span>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="closeModal('m-taskpack')">关闭</button>
+        <button class="btn btn-primary" onclick="copyTaskpack()">📋 复制任务包</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 回填弹窗 ===== -->
+<div class="modal-mask" id="m-backfill">
+  <div class="modal">
+    <div class="modal-head"><h3>📥 回填结果</h3><button class="modal-close" onclick="closeModal('m-backfill')">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>粘贴千问办公返回的回填码</label>
+        <textarea id="backfill-text" rows="10" placeholder="【回填:history】
+刘佩龙|您好，本次考试成绩 92 分|成功
+
+【回填:todos】
+刘佩龙|提交 Q3 安全整改报告|2026-10-01 18:00|已创建"></textarea>
+        <div class="tip">支持混合多段：【回填:history】发送结果 ·【回填:minutes】速记 ·【回填:analysis】速记分析 ·【回填:todos】待办状态</div>
+      </div>
+      <div id="backfill-report" style="margin-top:12px;font-size:13px;line-height:1.8;"></div>
+    </div>
+    <div class="modal-foot">
+      <span class="left-note"></span>
+      <button class="btn btn-primary" onclick="doBackfill()">导入回填</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================= 数据层 ================= */
+const LS_V2='dwconsole_v2', LS_V1='dwpush_data_v1';
+let store=loadStore();
+
+function loadStore(){
+  let s=null;
+  try{ const raw=localStorage.getItem(LS_V2); if(raw) s=JSON.parse(raw); }catch(e){}
+  if(!s){
+    s={contacts:[],history:[],minutes:[],todos:[],draft:null};
+    try{ // 从 v1 迁移
+      const old=localStorage.getItem(LS_V1);
+      if(old){ const o=JSON.parse(old);
+        s.contacts=(o.contacts||[]).map((c,i)=>({id:'c'+i,name:c.name,mobile:c.mobile||'',dept:c.dept||'',note:c.note||''}));
+        s.history=o.history||[];
+      }
+    }catch(e){}
+  }
+  s.contacts=s.contacts||[]; s.history=s.history||[]; s.minutes=s.minutes||[]; s.todos=s.todos||[]; s.draft=s.draft||null;
+  return s;
+}
+function save(){ try{ localStorage.setItem(LS_V2,JSON.stringify(store)); }catch(e){ toast('本地存储失败','error'); } }
+function uid(p){ return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+/* ================= 推送状态 ================= */
+let pushRows=[];        // {name, mobile, vars:{}, override:''}
+let varCols=[];         // ['成绩', ...]
+let curMinuteId=null, editContactIdx=-1, overrideIdx=-1;
+
+/* ================= 工具 ================= */
+function toast(msg,type){
+  const t=document.createElement('div');
+  t.className='toast-item '+(type||''); t.textContent=msg;
+  document.getElementById('toast').appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),320);},2400);
+}
+function esc(s){const d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+function nowStr(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
+function normLink(l){ l=(l||'').trim(); if(!l)return''; return /^https?:\/\//i.test(l)?l:'https://'+l; }
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.modal-mask').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
+
+/* ================= 导航 ================= */
+const pageMeta={
+  push:['推送任务','模板+变量，统一文案、每人不同内容'],
+  contacts:['联系人名单','导入 / 导出 / 编辑 / 删除'],
+  minutes:['会议速记','拉取钉钉AI听记、筛选与分析'],
+  todos:['待办管理','创建、修改、删除钉钉待办'],
+  history:['发送历史','推送结果记录与回填'],
+  guide:['使用说明','模块说明与标准工作闭环']
+};
+document.querySelectorAll('.nav-item').forEach(item=>{
+  item.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+    item.classList.add('active');
+    const p=item.dataset.page;
+    document.querySelectorAll('.page').forEach(pg=>pg.classList.remove('active'));
+    document.getElementById('page-'+p).classList.add('active');
+    document.getElementById('page-title').textContent=pageMeta[p][0];
+    document.getElementById('page-sub').textContent=pageMeta[p][1];
+    if(p==='contacts')renderContacts();
+    if(p==='minutes')renderMinutes();
+    if(p==='todos')renderTodos();
+    if(p==='history')renderHistory();
+  });
+});
+document.getElementById('page-sub').textContent=pageMeta.push[1];
+
+/* ================= 推送：收件人 ================= */
+function openPickContacts(){
+  if(!store.contacts.length){toast('联系人名单为空，请先添加或导入联系人','error');return;}
+  const box=document.getElementById('pick-list');
+  box.innerHTML=store.contacts.map((c,i)=>`
+    <label class="ck-item"><input type="checkbox" data-ci="${i}">
+    <span class="nm">${esc(c.name)}</span><span class="mt">${esc(c.mobile||'')}${c.dept?' · '+esc(c.dept):''}</span></label>`).join('');
+  openModal('m-pick');
+}
+function pickAll(on){document.querySelectorAll('#pick-list input[type=checkbox]').forEach(cb=>cb.checked=on);}
+function confirmPick(){
+  const sel=[...document.querySelectorAll('#pick-list input[type=checkbox]:checked')].map(cb=>+cb.dataset.ci);
+  if(!sel.length){toast('请至少勾选一位联系人','error');return;}
+  sel.forEach(i=>{
+    const c=store.contacts[i];
+    if(pushRows.some(r=>r.name===c.name&&r.mobile===c.mobile))return;
+    pushRows.push({name:c.name,mobile:c.mobile||'',vars:{},override:''});
+  });
+  closeModal('m-pick'); renderPushTable(); savePushDraft();
+  toast(`已加入 ${sel.length} 位收件人`,'success');
+}
+function openImportRoster(){openModal('m-import-roster');}
+function confirmImportRoster(){
+  const raw=document.getElementById('roster-paste').value.trim();
+  if(!raw){toast('请粘贴名单','error');return;}
+  let added=0;
+  raw.split('\n').forEach(line=>{
+    line=line.trim(); if(!line)return;
+    const parts=line.split('|').map(s=>s.trim());
+    if(!parts[0])return;
+    const mobile=(parts[1]&&/^\d{11}$/.test(parts[1]))?parts[1]:'';
+    const vars={};
+    varCols.forEach((v,i)=>{ vars[v]=parts[2+i]||''; });
+    if(pushRows.some(r=>r.name===parts[0]&&r.mobile===mobile))return;
+    pushRows.push({name:parts[0],mobile,vars,override:''}); added++;
+  });
+  document.getElementById('roster-paste').value='';
+  closeModal('m-import-roster'); renderPushTable(); savePushDraft();
+  toast(`导入 ${added} 位收件人`,'success');
+}
+function clearPushRows(){
+  if(!pushRows.length)return;
+  if(!confirm('确定清空当前收件人名单？'))return;
+  pushRows=[]; renderPushTable(); savePushDraft(); toast('已清空');
+}
+function removePushRow(i){pushRows.splice(i,1);renderPushTable();savePushDraft();}
+function openOverride(i){
+  overrideIdx=i;
+  document.getElementById('override-title').textContent='覆盖内容 · '+pushRows[i].name;
+  document.getElementById('override-text').value=pushRows[i].override||'';
+  openModal('m-override');
+}
+function confirmOverride(){
+  pushRows[overrideIdx].override=document.getElementById('override-text').value.trim();
+  closeModal('m-override'); renderPushTable(); savePushDraft(); toast('已保存该人专属内容','success');
+}
+
+/* ================= 推送：变量 ================= */
+function addVarCol(){
+  const v=prompt('变量名称（如：成绩、部门、分数）：');
+  if(!v)return;
+  const name=v.trim();
+  if(!name)return;
+  if(varCols.includes(name)){toast('该变量已存在','error');return;}
+  varCols.push(name);
+  renderVarTags(); renderPushTable(); savePushDraft();
+  toast(`已添加变量「${name}」，模板中用 {${name}} 引用`,'success');
+}
+function removeVarCol(v){
+  varCols=varCols.filter(x=>x!==v);
+  pushRows.forEach(r=>{delete r.vars[v];});
+  renderVarTags(); renderPushTable(); savePushDraft();
+}
+function renderVarTags(){
+  document.getElementById('var-tags').innerHTML=varCols.map(v=>
+    `<span class="var-tag">{${esc(v)}} <span class="x" onclick="removeVarCol('${esc(v)}')" title="删除该变量列">✕</span></span>`).join('')
+    ||'<span style="font-size:12px;color:var(--dt-text-sub);">暂无变量列</span>';
+}
+
+/* ================= 推送：渲染 ================= */
+function renderMsg(row){
+  if(row.override)return {msg:row.override,warn:false};
+  let t=document.getElementById('tpl-msg').value.trim();
+  t=t.replace(/\{姓名\}/g,row.name);
+  varCols.forEach(v=>{ t=t.split('{'+v+'}').join(row.vars[v]||''); });
+  const warn=/\{[^{}]+\}/.test(t);
+  return {msg:t,warn};
+}
+function renderPushTable(){
+  const zone=document.getElementById('push-rows-zone');
+  const panel=document.getElementById('push-preview-panel');
+  if(!pushRows.length){
+    zone.style.display='block';
+    zone.innerHTML='<div class="empty"><div class="big">👥</div>尚未选择收件人，点击「从联系人选择」或「按格式粘贴」</div>';
+    panel.style.display='none'; return;
+  }
+  zone.style.display='none'; panel.style.display='block';
+  document.getElementById('push-preview-count').textContent=`共 ${pushRows.length} 人`;
+  const varHeads=varCols.map(v=>`<th style="min-width:100px;">${esc(v)}</th>`).join('');
+  document.querySelector('#push-preview-panel thead tr').innerHTML=
+    `<th>#</th><th>收件人</th><th>手机号</th>${varHeads}<th>最终消息内容</th><th>操作</th>`;
+  document.getElementById('push-preview-tbody').innerHTML=pushRows.map((r,i)=>{
+    const {msg,warn}=renderMsg(r);
+    const link=normLink(document.getElementById('tpl-link').value);
+    const varCells=varCols.map(v=>`<td><input class="var-input" value="${esc(r.vars[v]||'')}" onchange="setVar(${i},'${esc(v)}',this.value)" placeholder="${esc(v)}"></td>`).join('');
+    return `<tr>
+      <td style="color:var(--dt-text-sub);">${i+1}</td>
+      <td><b>${esc(r.name)}</b></td>
+      <td>${r.mobile?esc(r.mobile):'<span style="color:var(--dt-text-sub);">—</span>'}</td>
+      ${varCells}
+      <td><div class="msg-preview">${r.override?'<span class="pill pill-blue" style="margin-bottom:4px;">专属内容</span><br>':''}${esc(msg)||'<span style="color:var(--dt-danger);">（无内容）</span>'}${warn?'<br><span style="color:var(--dt-warn);font-size:11px;">⚠ 有变量未填值</span>':''}${link?`<br><span class="link-badge" title="${esc(link)}">🔗 ${esc(link)}</span>`:''}</div></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openOverride(${i})">${r.override?'改写':'覆盖'}</button>
+        <button class="btn btn-danger-ghost btn-sm" onclick="removePushRow(${i})">移除</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function setVar(i,v,val){pushRows[i].vars[v]=val;renderPushTable();savePushDraft();}
+function savePushDraft(){
+  store.draft={pushRows,varCols,tplMsg:document.getElementById('tpl-msg').value,tplLink:document.getElementById('tpl-link').value};
+  save();
+}
+function restorePushDraft(){
+  if(!store.draft)return;
+  const d=store.draft;
+  pushRows=d.pushRows||[]; varCols=d.varCols||[];
+  document.getElementById('tpl-msg').value=d.tplMsg||'';
+  document.getElementById('tpl-link').value=d.tplLink||'';
+  renderVarTags(); renderPushTable();
+}
+
+/* ================= 任务包生成 ================= */
+function buildPushTaskpack(){
+  const link=normLink(document.getElementById('tpl-link').value);
+  const lines=pushRows.map((r,i)=>{
+    const {msg}=renderMsg(r);
+    const m=r.mobile?`（手机号 ${r.mobile}，优先按手机号精确匹配）`:'（未提供手机号，按姓名匹配）';
+    return `${i+1}. 收件人：${r.name}${m}\n   内容：${msg}${link?'\n   链接：'+link:''}`;
+  });
+  return `【钉钉批量推送任务】\n请通过钉钉单聊给以下同事逐个发送消息。发送前先匹配用户并向我确认最终名单，确认后逐条发送，完成后汇报每人结果并输出回填码。\n\n发送清单（共 ${pushRows.length} 人）：\n${lines.join('\n\n')}\n\n要求：\n- 消息以文本发送，链接附在文案末尾单独一行\n- 同名按手机号区分；匹配失败不要跳过，明确告知哪条失败\n- 完成后输出【回填:history】格式的回填码（每行：姓名|实际发送内容|成功或失败）`;
+}
+function buildFetchMinutesTaskpack(){
+  return `【拉取钉钉AI听记】\n请查询我最近的钉钉 AI 听记列表（默认最近 7 天，如我指定了范围则按指定范围），列出主题和时间供我确认；确认后把每条听记的摘要和要点整理出来，并输出【回填:minutes】格式的回填码：\n\n【回填:minutes】\n时间|主题|钉钉AI听记|标签\n摘要内容（可多行）\n---\n下一条…\n\n注意：如需完整逐字稿或行动项，我在对话里另行指定。`;
+}
+function buildAnalysisTaskpack(id){
+  const m=store.minutes.find(x=>x.id===id); if(!m)return'';
+  return `【会议速记AI分析】\n请分析以下会议速记，输出：1）核心要点（3-5条）；2）行动项清单（事项/责任人/截止）；3）风险与待确认问题。\n\n主题：${m.topic}\n时间：${m.time}\n摘要：${m.summary||'（无）'}\n完整内容：\n${(m.transcript||m.summary||'').slice(0,3000)}\n\n分析完成后输出【回填:analysis】格式的回填码：第一行为主题「${m.topic}」，随后为分析全文。`;
+}
+function buildTodosTaskpack(){
+  const pend=store.todos.filter(t=>t.status==='待创建');
+  if(!pend.length)return'';
+  const lines=pend.map((t,i)=>`${i+1}. 执行人：${t.name}${t.mobile?`（手机号 ${t.mobile}）`:''}\n   标题：${t.title}\n   截止：${t.due||'未设置'}\n   优先级：${t.pri}\n   备注：${t.note||'无'}`);
+  return `【钉钉待办创建任务】\n请为以下人员创建钉钉待办。创建前先匹配用户并向我确认清单，确认后逐条创建，完成后汇报结果并输出回填码。\n\n待创建清单（共 ${pend.length} 项）：\n${lines.join('\n\n')}\n\n要求：\n- 同名按手机号区分；失败不跳过，明确告知哪条失败\n- 完成后输出【回填:todos】格式的回填码（每行：执行人|标题|截止|已创建或失败）`;
+}
+function buildTodoActionTaskpack(t,action){
+  const map={done:'标记完成',undone:'标记未完成',del:'删除',update:'修改'};
+  return `【钉钉待办${map[action]||'操作'}】\n请在我钉钉的待办中找到以下待办并${map[action]||'操作'}它：\n\n执行人：${t.name}\n标题：${t.title}\n截止：${t.due||'未设置'}\n\n先列出匹配到的待办让我确认，确认后执行；完成后输出【回填:todos】回填码（每行：执行人|标题|截止|${action==='del'?'已删除':action==='done'?'已完成':'已更新'}）。`;
+}
+function buildSyncTodosTaskpack(){
+  return `【同步钉钉待办】\n请查询我当前钉钉待办列表（含我创建的和分配给我的），按状态分组列出。然后输出【回填:todos】格式的回填码（每行：执行人|标题|截止|状态），我在平台导入对齐。`;
+}
+
+function openTaskpack(kind,arg){
+  let pack='';
+  if(kind==='push'){ if(!pushRows.length){toast('请先选择收件人','error');return;} pack=buildPushTaskpack(); }
+  else if(kind==='fetchMinutes'){ pack=buildFetchMinutesTaskpack(); }
+  else if(kind==='analysis'){ pack=buildAnalysisTaskpack(arg); }
+  else if(kind==='todos'){ if(!store.todos.some(t=>t.status==='待创建')){toast('没有待创建的待办，请先新建','error');return;} pack=buildTodosTaskpack(); }
+  else if(kind==='syncTodos'){ pack=buildSyncTodosTaskpack(); }
+  document.getElementById('taskpack-content').textContent=pack;
+  document.getElementById('taskpack-note').textContent='生成时间 '+nowStr();
+  openModal('m-taskpack');
+}
+function openAnalysisTaskpack(id){closeModal('m-minute-detail');openTaskpack('analysis',id);}
+function copyTaskpack(){
+  const text=document.getElementById('taskpack-content').textContent;
+  const done=()=>toast('已复制，请粘贴到千问办公对话发送','success');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done).catch(()=>fbCopy(text,done));}
+  else fbCopy(text,done);
+}
+function fbCopy(text,done){
+  const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');done();}catch(e){toast('复制失败，请手动全选复制','error');}
+  ta.remove();
+}
+
+/* ================= 联系人 ================= */
+function renderContacts(){
+  document.getElementById('contacts-total').textContent=store.contacts.length;
+  const tb=document.getElementById('contacts-tbody');
+  if(!store.contacts.length){tb.innerHTML='<tr><td colspan="5"><div class="empty"><div class="big">👥</div>暂无联系人，点击右上角新建或批量导入</div></td></tr>';return;}
+  tb.innerHTML=store.contacts.map((c,i)=>`<tr>
+    <td><b>${esc(c.name)}</b></td>
+    <td>${esc(c.mobile)||'—'}</td>
+    <td>${esc(c.dept)||'—'}</td>
+    <td>${esc(c.note)||'—'}</td>
+    <td style="white-space:nowrap;">
+      <button class="btn btn-ghost btn-sm" onclick="quoteContact(${i})">引用</button>
+      <button class="btn btn-ghost btn-sm" onclick="openContactEdit(${i})">编辑</button>
+      <button class="btn btn-danger-ghost btn-sm" onclick="delContact(${i})">删除</button>
+    </td></tr>`).join('');
+}
+function openContactEdit(i){
+  editContactIdx=i;
+  document.getElementById('contact-edit-title').textContent=i<0?'新建联系人':'编辑联系人';
+  const c=i<0?{name:'',mobile:'',dept:'',note:''}:store.contacts[i];
+  document.getElementById('c-name').value=c.name||'';
+  document.getElementById('c-mobile').value=c.mobile||'';
+  document.getElementById('c-dept').value=c.dept||'';
+  document.getElementById('c-note').value=c.note||'';
+  openModal('m-contact');
+}
+function saveContactEdit(){
+  const name=document.getElementById('c-name').value.trim();
+  if(!name){toast('姓名必填','error');return;}
+  const obj={id:editContactIdx<0?uid('c'):(store.contacts[editContactIdx].id||uid('c')),
+    name,mobile:document.getElementById('c-mobile').value.trim(),
+    dept:document.getElementById('c-dept').value.trim(),
+    note:document.getElementById('c-note').value.trim()};
+  if(editContactIdx<0)store.contacts.push(obj); else store.contacts[editContactIdx]=obj;
+  save();renderContacts();closeModal('m-contact');
+  toast('联系人已保存','success');
+}
+function delContact(i){
+  if(!confirm(`确定删除联系人「${store.contacts[i].name}」？`))return;
+  store.contacts.splice(i,1);save();renderContacts();toast('已删除');
+}
+function quoteContact(i){
+  const c=store.contacts[i];
+  if(!pushRows.some(r=>r.name===c.name&&r.mobile===c.mobile))pushRows.push({name:c.name,mobile:c.mobile||'',vars:{},override:''});
+  savePushDraft();
+  document.querySelector('.nav-item[data-page="push"]').click();
+  toast(`「${c.name}」已加入推送名单`,'success');
+}
+function openImportContacts(){document.getElementById('contacts-paste').value='';openModal('m-import-contacts');}
+function confirmImportContacts(){
+  const raw=document.getElementById('contacts-paste').value.trim();
+  if(!raw){toast('请粘贴名单','error');return;}
+  let added=0,skipped=0;
+  raw.split('\n').forEach(line=>{
+    line=line.trim();if(!line)return;
+    const p=line.split('|').map(s=>s.trim());
+    if(!p[0])return;
+    const mobile=(p[1]&&/^\d{11}$/.test(p[1]))?p[1]:'';
+    if(store.contacts.some(c=>c.name===p[0]&&(c.mobile===mobile))){skipped++;return;}
+    store.contacts.push({id:uid('c'),name:p[0],mobile,dept:p[2]||'',note:p[3]||''});added++;
+  });
+  save();renderContacts();closeModal('m-import-contacts');
+  toast(`导入完成：新增 ${added} 人${skipped?`，跳过重复 ${skipped} 人`:''}`,'success');
+}
+function exportContacts(fmt){
+  if(!store.contacts.length){toast('暂无联系人可导出','error');return;}
+  let text,name;
+  if(fmt==='csv'){
+    text='\uFEFF姓名,手机号,部门,备注\n'+store.contacts.map(c=>[c.name,c.mobile,c.dept,c.note].map(x=>'"'+String(x||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+    name='钉钉联系人名单.csv';
+  }else{
+    text=store.contacts.map(c=>[c.name,c.mobile,c.dept,c.note].filter(x=>x!==undefined).join(' | ')).join('\n');
+    name='钉钉联系人名单.txt';
+  }
+  const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);
+  toast('已导出','success');
+}
+
+/* ================= 会议速记 ================= */
+function openMinuteAdd(){
+  document.getElementById('mi-topic').value='';
+  document.getElementById('mi-time').value='';
+  document.getElementById('mi-tags').value='';
+  document.getElementById('mi-summary').value='';
+  document.getElementById('mi-transcript').value='';
+  openModal('m-minute-add');
+}
+function confirmMinuteAdd(){
+  const topic=document.getElementById('mi-topic').value.trim();
+  if(!topic){toast('请填写主题','error');return;}
+  store.minutes.push({id:uid('m'),time:document.getElementById('mi-time').value||nowStr(),topic,
+    source:'手动添加',tags:document.getElementById('mi-tags').value.trim(),
+    summary:document.getElementById('mi-summary').value.trim(),
+    transcript:document.getElementById('mi-transcript').value.trim(),analysis:''});
+  save();closeModal('m-minute-add');renderMinutes();
+  toast('速记已保存','success');
+}
+function resetMinuteFilter(){['mf-start','mf-end','mf-kw'].forEach(id=>document.getElementById(id).value='');document.getElementById('mf-src').value='';renderMinutes();}
+function renderMinutes(){
+  const start=document.getElementById('mf-start').value;
+  const end=document.getElementById('mf-end').value;
+  const kw=document.getElementById('mf-kw').value.trim().toLowerCase();
+  const src=document.getElementById('mf-src').value;
+  let list=store.minutes.slice().sort((a,b)=>(b.time||'').localeCompare(a.time||''));
+  if(start)list=list.filter(m=>(m.time||'')>=start);
+  if(end)list=list.filter(m=>(m.time||'')<=(end+' 23:59'));
+  if(kw)list=list.filter(m=>((m.topic||'')+(m.summary||'')+(m.tags||'')+(m.transcript||'')).toLowerCase().includes(kw));
+  if(src)list=list.filter(m=>m.source===src);
+  const box=document.getElementById('minutes-list');
+  if(!list.length){box.innerHTML='<div class="empty"><div class="big">🎙️</div>没有符合条件的速记<br><span style="font-size:12px;">点击「拉取钉钉听记」生成任务包，由千问办公拉取你的钉钉 AI 听记并回填</span></div>';return;}
+  box.innerHTML=`<div style="font-size:12px;color:var(--dt-text-sub);margin-bottom:10px;">筛选结果：${list.length} 条 / 共 ${store.minutes.length} 条</div>`+
+  list.map(m=>`<div class="minute-card">
+    <div class="mc-top">
+      <h3>${esc(m.topic)}</h3>
+      <span class="pill ${m.source==='钉钉AI听记'?'pill-blue':'pill-gray'}">${esc(m.source)}</span>
+    </div>
+    <div class="mc-meta">🕐 ${esc(m.time)}${m.tags?' · 🏷 '+esc(m.tags):''}${m.analysis?' · <span style="color:var(--dt-success);">已AI分析</span>':''}</div>
+    <div class="mc-summary">${esc((m.summary||m.transcript||'').slice(0,120))}${(m.summary||m.transcript||'').length>120?'…':''}</div>
+    <div class="mc-actions">
+      <button class="btn btn-ghost btn-sm" onclick="showMinute('${m.id}')">详情</button>
+      <button class="btn btn-primary btn-sm" onclick="openAnalysisTaskpack('${m.id}')">🤖 AI分析</button>
+      <button class="btn btn-danger-ghost btn-sm" onclick="delMinute('${m.id}')">删除</button>
+    </div>
+  </div>`).join('');
+}
+function showMinute(id){
+  const m=store.minutes.find(x=>x.id===id);if(!m)return;
+  curMinuteId=id;
+  document.getElementById('md-title').textContent=m.topic;
+  document.getElementById('md-meta').innerHTML=`时间：${esc(m.time)}<br>来源：${esc(m.source)}${m.tags?'<br>标签：'+esc(m.tags):''}`;
+  document.getElementById('md-summary').textContent=m.summary||'（无）';
+  document.getElementById('md-transcript').textContent=m.transcript||'（无）';
+  const az=document.getElementById('md-analysis-zone');
+  if(m.analysis){az.style.display='block';document.getElementById('md-analysis').textContent=m.analysis;}
+  else az.style.display='none';
+  document.getElementById('md-note').textContent=m.analysis?'':'尚无分析，点击右下角生成 AI 分析任务包';
+  openModal('m-minute-detail');
+}
+function delMinute(id){
+  const m=store.minutes.find(x=>x.id===id);if(!m)return;
+  if(!confirm(`确定删除速记「${m.topic}」？`))return;
+  store.minutes=store.minutes.filter(x=>x.id!==id);save();
+  closeModal('m-minute-detail');renderMinutes();toast('已删除');
+}
+
+/* ================= 待办 ================= */
+function openTodoAdd(){
+  const sel=document.getElementById('td-person');
+  if(!store.contacts.length){toast('请先在「联系人名单」添加执行人','error');return;}
+  sel.innerHTML=store.contacts.map((c,i)=>`<option value="${i}">${esc(c.name)}${c.mobile?'（'+esc(c.mobile)+'）':''}</option>`).join('');
+  document.getElementById('td-title').value='';
+  document.getElementById('td-due').value='';
+  document.getElementById('td-pri').value='中';
+  document.getElementById('td-note').value='';
+  openModal('m-todo-add');
+}
+function confirmTodoAdd(){
+  const title=document.getElementById('td-title').value.trim();
+  if(!title){toast('请填写待办标题','error');return;}
+  const c=store.contacts[+document.getElementById('td-person').value];
+  store.todos.push({id:uid('t'),name:c.name,mobile:c.mobile||'',title,
+    due:document.getElementById('td-due').value,pri:document.getElementById('td-pri').value,
+    note:document.getElementById('td-note').value.trim(),status:'待创建'});
+  save();closeModal('m-todo-add');renderTodos();
+  toast('已加入待创建清单，点击页面下方按钮生成任务包','success');
+}
+function renderTodos(){
+  const tb=document.getElementById('todos-tbody');
+  if(!store.todos.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="big">✅</div>暂无待办，点击右上角「新建待办」配置<br><span style="font-size:12px;">生成任务包后由千问办公在钉钉中真实创建</span></div></td></tr>';}
+  else{
+    tb.innerHTML=store.todos.slice().reverse().map(t=>{
+      const priPill=t.pri==='高'?'pill-red':t.pri==='低'?'pill-gray':'pill-orange';
+      const stPill={'待创建':'pill-orange','已创建':'pill-blue','已完成':'pill-green','已删除':'pill-gray','失败':'pill-red'}[t.status]||'pill-gray';
+      return `<tr>
+        <td><b>${esc(t.name)}</b></td>
+        <td>${esc(t.title)}${t.note?`<div style="font-size:11.5px;color:var(--dt-text-sub);margin-top:3px;">${esc(t.note)}</div>`:''}</td>
+        <td>${esc(t.due)||'—'}</td>
+        <td><span class="pill ${priPill}">${esc(t.pri)}</span></td>
+        <td><span class="pill ${stPill}">${esc(t.status)}</span></td>
+        <td style="white-space:nowrap;">
+          ${t.status==='待创建'?`<button class="btn btn-ghost btn-sm" onclick="removeTodo('${t.id}')">移除</button>`:''}
+          ${t.status!=='待创建'&&t.status!=='已删除'?`
+            <button class="btn btn-ghost btn-sm" onclick="todoAction('${t.id}','done')">完成</button>
+            <button class="btn btn-ghost btn-sm" onclick="todoAction('${t.id}','update')">改期</button>
+            <button class="btn btn-danger-ghost btn-sm" onclick="todoAction('${t.id}','del')">删除</button>`:''}
+        </td></tr>`;
+    }).join('');
+  }
+  // 底部生成按钮
+  let zone=document.getElementById('todos-gen-zone');
+  if(!zone){
+    zone=document.createElement('div');zone.id='todos-gen-zone';
+    zone.className='panel-body';zone.style.display='flex';zone.style.justifyContent='flex-end';
+    document.getElementById('page-todos').querySelector('.panel').appendChild(zone);
+  }
+  zone.innerHTML=`<button class="btn btn-primary" onclick="openTaskpack('todos')">⚙️ 生成待办任务包（${store.todos.filter(t=>t.status==='待创建').length} 项待创建）</button>`;
+}
+function removeTodo(id){store.todos=store.todos.filter(t=>t.id!==id);save();renderTodos();toast('已移除');}
+function todoAction(id,action){
+  const t=store.todos.find(x=>x.id===id);if(!t)return;
+  if(action==='update'){
+    const nd=prompt('新的截止时间（格式：2026-10-01 18:00）：',t.due||'');
+    if(nd===null)return; t.due=nd.trim();
+  }
+  document.getElementById('taskpack-content').textContent=buildTodoActionTaskpack(t,action);
+  document.getElementById('taskpack-note').textContent='生成时间 '+nowStr();
+  openModal('m-taskpack');
+}
+
+/* ================= 历史 ================= */
+function renderHistory(){
+  const tb=document.getElementById('history-tbody');
+  if(!store.history.length){tb.innerHTML='<tr><td colspan="4"><div class="empty"><div class="big">📋</div>暂无发送历史<br><span style="font-size:12px;">执行完推送后，将千问办公返回的回填码在「回填结果」中导入</span></div></td></tr>';return;}
+  tb.innerHTML=store.history.slice().reverse().map(h=>`<tr>
+    <td>${esc(h.time)}</td><td><b>${esc(h.name)}</b></td>
+    <td><div class="msg-preview">${esc(h.msg)}</div></td>
+    <td><span class="pill ${h.ok?'pill-green':'pill-red'}">${h.ok?'成功':'失败'}</span></td></tr>`).join('');
+}
+function clearHistory(){
+  if(!store.history.length){toast('历史已为空','error');return;}
+  if(!confirm('确定清空全部发送历史？'))return;
+  store.history=[];save();renderHistory();toast('已清空');
+}
+
+/* ================= 回填 ================= */
+function openBackfill(){document.getElementById('backfill-text').value='';document.getElementById('backfill-report').innerHTML='';openModal('m-backfill');}
+function doBackfill(){
+  const raw=document.getElementById('backfill-text').value;
+  const report=[];
+  const secRe=/【回填:(history|minutes|analysis|todos)】/g;
+  let match,sections=[],last=null;
+  while((match=secRe.exec(raw))!==null){
+    if(last)sections.push({type:last.type,text:raw.slice(last.end,match.index).trim()});
+    last={type:match[1],end:secRe.lastIndex}; 
+  }
+  if(last)sections.push({type:last.type,text:raw.slice(last.end).trim()});
+  if(!sections.length){toast('未识别到任何【回填:xxx】标记','error');return;}
+  sections.forEach(sec=>{
+    if(sec.type==='history'){
+      let n=0;
+      sec.text.split('\n').forEach(line=>{line=line.trim();if(!line)return;
+        const p=line.split('|');
+        if(p.length>=2){store.history.push({time:nowStr(),name:p[0].trim(),msg:p[1].trim(),ok:/成功/.test((p[2]||'')+' '+line)});n++;}
+      });
+      report.push(`✅ 发送历史导入 ${n} 条`);
+    }else if(sec.type==='todos'){
+      let n=0;
+      sec.text.split('\n').forEach(line=>{line=line.trim();if(!line)return;
+        const p=line.split('|').map(s=>s.trim());
+        if(p.length>=2){
+          const st=(p[3]||'已创建');
+          const exist=store.todos.find(t=>t.name===p[0]&&t.title===p[1]);
+          if(exist){exist.status=st.replace('已创建','已创建');exist.due=p[2]||exist.due;}
+          else store.todos.push({id:uid('t'),name:p[0],mobile:'',title:p[1],due:p[2]||'',pri:'中',note:'',status:st});
+          n++;
+        }
+      });
+      report.push(`✅ 待办导入/更新 ${n} 条`);
+    }else if(sec.type==='minutes'){
+      const blocks=sec.text.split(/\n---\s*\n/);
+      let n=0;
+      blocks.forEach(b=>{
+        b=b.trim();if(!b)return;
+        const lines=b.split('\n');
+        const head=(lines[0]||'').split('|').map(s=>s.trim());
+        if(!head[0])return;
+        const body=lines.slice(1).join('\n').trim();
+        store.minutes.push({id:uid('m'),time:head[0],topic:head[1]||'未命名',source:head[2]||'钉钉AI听记',tags:head[3]||'',summary:body,transcript:'',analysis:''});
+        n++;
+      });
+      report.push(`✅ 速记导入 ${n} 条`);
+    }else if(sec.type==='analysis'){
+      const lines=sec.text.split('\n');
+      const topic=(lines[0]||'').trim();
+      const text=lines.slice(1).join('\n').trim();
+      const m=store.minutes.find(x=>x.topic===topic)||store.minutes.slice().sort((a,b)=>(b.time||'').localeCompare(a.time||''))[0];
+      if(m){m.analysis=text;report.push(`✅ AI 分析已附加到「${m.topic}」`);}
+      else report.push('⚠ 未找到匹配的速记，分析未导入');
+    }
+  });
+  save();renderHistory();renderTodos();renderMinutes();
+  document.getElementById('backfill-report').innerHTML=report.map(r=>`<div>${r}</div>`).join('');
+  toast('回填完成','success');
+}
+
+/* ================= 初始化 ================= */
+restorePushDraft();
+renderContacts();renderMinutes();renderTodos();renderHistory();
+</script>
+</body>
+</html>
