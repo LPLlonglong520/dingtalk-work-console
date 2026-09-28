@@ -306,7 +306,9 @@ tr:hover td{background:#fafcff;}
           <div class="panel-head">
             <h2>🎙️ 会议速记库</h2>
             <div class="actions">
-              <button class="btn btn-primary btn-sm" onclick="openTaskpack('fetchMinutes')">🔄 拉取钉钉听记</button>
+              <button class="btn btn-primary btn-sm" onclick="openTaskpack('recordStart')">🎙️ 开始速记</button>
+              <button class="btn btn-ghost btn-sm" onclick="openTaskpack('recordStop')">⏹️ 结束速记</button>
+              <button class="btn btn-ghost btn-sm" onclick="openTaskpack('fetchMinutes')">🔄 拉取钉钉听记</button>
               <button class="btn btn-ghost btn-sm" onclick="openMinuteAdd()">＋ 手动添加速记</button>
               <button class="btn btn-ghost btn-sm" onclick="openBackfill()">📥 回填结果</button>
             </div>
@@ -375,7 +377,7 @@ tr:hover td{background:#fafcff;}
             <div class="module-cards">
               <div class="module-card"><b>📮 推送任务</b><p>模板+变量实现「统一文案、每人不同」（如考试成绩）：添加「成绩」变量列，模板写 {姓名}、{成绩}，每人填各自的值。个别特殊的人可用「覆盖内容」。</p></div>
               <div class="module-card"><b>👥 联系人名单</b><p>批量导入/导出（TXT/CSV）、新建、编辑、删除；推送时直接勾选引用。</p></div>
-              <div class="module-card"><b>🎙️ 会议速记</b><p>生成任务包让千问办公拉取钉钉 AI 听记并回填本平台；也可手动粘贴纪要。支持按时间、主题、来源筛选，AI 分析生成要点与行动项。</p></div>
+              <div class="module-card"><b>🎙️ 会议速记</b><p>可直接在平台「开始速记/结束速记」，由千问办公通过钉钉闪记真实录音；钉钉侧听记（会议录制/通话/闪记）都可拉取回填本平台；支持按时间、主题、来源筛选，AI 分析生成要点与行动项；工作日早9点自动同步新听记。</p></div>
               <div class="module-card"><b>✅ 待办管理</b><p>为联系人配置钉钉待办（标题/截止/优先级），通过任务包创建；修改、删除同样走任务包；支持同步钉钉待办列表。</p></div>
             </div>
           </div>
@@ -812,6 +814,12 @@ function buildPushTaskpack(){
 function buildFetchMinutesTaskpack(){
   return `【拉取钉钉AI听记】\n请查询我最近的钉钉 AI 听记列表（默认最近 7 天，如我指定了范围则按指定范围），列出主题和时间供我确认；确认后把每条听记的摘要和要点整理出来，并输出【回填:minutes】格式的回填码：\n\n【回填:minutes】\n时间|主题|钉钉AI听记|标签\n摘要内容（可多行）\n---\n下一条…\n\n注意：如需完整逐字稿或行动项，我在对话里另行指定。`;
 }
+function buildRecordStartTaskpack(){
+  return `【开始钉钉速记】\n请通过 DWS 真实启动钉钉闪记录音（dws minutes +record-start）。要求：\n- 启动后告诉我录音已开始及开始时间\n- 若返回"已受理但未绑定"，如实告知状态并停止，不要重试\n- 录音期间保持静默等待，我随后会说「结束速记」让你停止\n- 提醒我：录音产生的听记会在工作日早9点的定时同步中自动整理，或我也可以手动说「拉取听记」`;
+}
+function buildRecordStopTaskpack(){
+  return `【结束钉钉速记】\n请停止当前正在进行的钉钉闪记录音（dws minutes +record-stop），停止后告诉我：\n- 录音时长和结束时间\n- 听记生成后（可能需要几分钟转写）的主题\n- 我可以在平台点「拉取钉钉听记」立即回填，或等工作日早9点自动同步`;
+}
 function buildAnalysisTaskpack(id){
   const m=store.minutes.find(x=>x.id===id); if(!m)return'';
   return `【会议速记AI分析】\n请分析以下会议速记，输出：1）核心要点（3-5条）；2）行动项清单（事项/责任人/截止）；3）风险与待确认问题。\n\n主题：${m.topic}\n时间：${m.time}\n摘要：${m.summary||'（无）'}\n完整内容：\n${(m.transcript||m.summary||'').slice(0,3000)}\n\n分析完成后输出【回填:analysis】格式的回填码：第一行为主题「${m.topic}」，随后为分析全文。`;
@@ -834,6 +842,8 @@ function openTaskpack(kind,arg){
   let pack='';
   if(kind==='push'){ if(!pushRows.length){toast('请先选择收件人','error');return;} pack=buildPushTaskpack(); }
   else if(kind==='fetchMinutes'){ pack=buildFetchMinutesTaskpack(); }
+  else if(kind==='recordStart'){ pack=buildRecordStartTaskpack(); }
+  else if(kind==='recordStop'){ pack=buildRecordStopTaskpack(); }
   else if(kind==='analysis'){ pack=buildAnalysisTaskpack(arg); }
   else if(kind==='todos'){ if(!store.todos.some(t=>t.status==='待创建')){toast('没有待创建的待办，请先新建','error');return;} pack=buildTodosTaskpack(); }
   else if(kind==='syncTodos'){ pack=buildSyncTodosTaskpack(); }
