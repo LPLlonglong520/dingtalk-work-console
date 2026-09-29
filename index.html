@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>钉钉数据中心</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --dt-blue:#1677ff;--dt-blue-dark:#0e5fd8;--dt-blue-light:#e8f3ff;
@@ -289,7 +290,23 @@ tr:hover td{background:#fafcff;}
         </div>
         <div id="ptab-compose">
           <div class="panel">
-            <div class="panel-head"><h2>📖 推送配置步骤（以给每人发成绩为例）</h2></div>
+            <div class="panel-head"><h2>📥 Excel 一键导入推送</h2><span class="tag">推荐</span></div>
+            <div class="panel-body">
+              <div class="hint"><b>Excel 格式约定</b>（列顺序任意，自动识别）：<br>
+              • <b>姓名</b>（必填）· <b>手机号</b>（必填，同名消歧）<br>
+              • 其余列均视为<b>消息内容</b>：按<b>Excel 从左到右的列顺序</b>拼接成每人一条消息，列与列之间直接连接不加分隔符（需要空格/换行请在单元格里自己写）<br>
+              • 含链接的列自动识别为链接附在文案后；<b>图片</b>列填图片 URL 的会在消息中以链接形式给出<br>
+              • 部门/备注列会被忽略不进入消息</div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <input type="file" id="excel-file" accept=".xlsx,.xls" style="display:none;" onchange="importExcel(this)">
+                <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()">📄 选择 Excel 文件</button>
+                <button class="btn btn-ghost" onclick="downloadExcelTemplate()">下载示例模板</button>
+                <span style="font-size:12px;color:var(--dt-text-sub);" id="excel-status">支持 .xlsx / .xls</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>📖 手动配置步骤（以给每人发成绩为例）</h2></div>
             <div class="panel-body" style="font-size:13px;line-height:2;">
               <b>第 1 步·添加联系人</b>：切到「👥 联系人」标签 → 「＋ 新建」或「📥 批量导入」（格式：<code>姓名 | 手机号 | 部门 | 备注</code>，姓名和手机号必填）<br>
               <b>第 2 步·选收件人</b>：回到本页点「从联系人选择」→ 勾选要发的人<br>
@@ -739,6 +756,90 @@ function renderStars(){
 }
 
 /* ================= 6 日常推送 ================= */
+
+/* ================= Excel 导入推送 ================= */
+const IGNORE_COLS=['部门','备注','部门/','备注/','department','note','remark','钉钉ID','钉钉id','userId','userid'];
+function isNameCol(h){return /姓名|名字|name/i.test(h);}
+function isMobileCol(h){return /手机|电话|mobile|phone/i.test(h);}
+function isLinkCol(h){return /链接|link|url/i.test(h);}
+function isImgCol(h){return /图片|image|img|图片链接/i.test(h);}
+function importExcel(input){
+  const file=input.files[0];
+  if(!file)return;
+  const st=document.getElementById('excel-status');
+  st.textContent='解析中…';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){st.textContent='表格无数据行';return;}
+      // 识别表头（原始顺序）
+      const headers=Object.keys(rows[0]);
+      const nameH=headers.find(isNameCol);
+      const mobileH=headers.find(isMobileCol);
+      const linkH=headers.find(isLinkCol);
+      const imgH=headers.find(isImgCol);
+      if(!nameH){st.textContent='未找到「姓名」列';toast('Excel 缺少姓名列','error');return;}
+      if(!mobileH){st.textContent='未找到「手机号」列';toast('Excel 缺少手机号列（必填）','error');return;}
+      // 内容列 = 除姓名/手机号/链接/图片/忽略列外，按原始顺序
+      const contentCols=headers.filter(h=>h!==nameH&&h!==mobileH&&h!==linkH&&h!==imgH&&!IGNORE_COLS.some(k=>h.startsWith(k)));
+      // 生成推送行
+      pushRows=[];varCols=[];
+      let added=0;
+      rows.forEach(r=>{
+        const name=String(r[nameH]||'').trim();
+        const mobile=String(r[mobileH]||'').trim();
+        if(!name)return;
+        // 拼接内容：按 contentCols 顺序
+        let msg='';
+        contentCols.forEach(h=>{msg+=String(r[h]||'').trim();});
+        const link=normLink(String(r[linkH]||'').trim());
+        const img=String(r[imgH]||'').trim();
+        pushRows.push({name,mobile,msg,link,img,override:''});
+        added++;
+      });
+      // Excel 模式使用专属模板视图
+      renderExcelRows();
+      savePushDraft();
+      st.textContent=`已导入 ${added} 人，内容列 ${contentCols.length} 个`;
+      toast(`Excel 导入成功：${added} 位收件人`,'success');
+    }catch(err){
+      st.textContent='解析失败';
+      toast('Excel 解析失败：'+(err.message||err),'error');
+    }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function renderExcelRows(){
+  const zone=document.getElementById('push-rows-zone'),panel=document.getElementById('push-preview-panel');
+  if(!pushRows.length){zone.style.display='block';panel.style.display='none';return;}
+  zone.style.display='none';panel.style.display='block';
+  document.getElementById('push-preview-count').textContent=`Excel 导入 · 共 ${pushRows.length} 人`;
+  document.getElementById('pp-thead').innerHTML='<th>#</th><th>收件人</th><th>手机号</th><th>消息内容</th><th>链接</th><th>操作</th>';
+  document.getElementById('push-preview-tbody').innerHTML=pushRows.map((r,i)=>`<tr>
+    <td style="color:var(--dt-text-sub);">${i+1}</td>
+    <td><b>${esc(r.name)}</b></td>
+    <td>${esc(r.mobile)||'—'}</td>
+    <td><div class="msg-preview">${esc(r.msg)||'<span style="color:var(--dt-danger);">（无内容）</span>'}</div></td>
+    <td>${r.link?`<a class="link-badge" href="${esc(r.link)}" target="_blank">🔗 链接</a>`:'—'}</td>
+    <td><button class="btn btn-danger-ghost btn-sm" onclick="removePushRow(${i})">移除</button></td>
+  </tr>`).join('');
+}
+function downloadExcelTemplate(){
+  const rows=[
+    {'姓名':'刘佩龙','手机号':'13336011475','固定1':'您好，','变量':'92','固定2':' 分，本次考试成绩','链接':'https://example.com/score','图片':''},
+    {'姓名':'王晨涛','手机号':'13800000001','固定1':'您好，','变量':'88','固定2':' 分，本次考试成绩','链接':'https://example.com/score','图片':''},
+  ];
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'推送名单');
+  XLSX.writeFile(wb,'推送模板.xlsx');
+  toast('模板已下载，填好后回来导入','success');
+}
+
 let pushRows=[],varCols=[],editContactIdx=-1,overrideIdx=-1;
 function switchPushTab(tab){
   document.querySelectorAll('#page-push .tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
@@ -804,13 +905,15 @@ function renderPushTable(){
   }).join('');
 }
 function setVar(i,v,val){pushRows[i].vars[v]=val;renderPushTable();savePushDraft();}
-function savePushDraft(){store.draft={pushRows,varCols,tplMsg:document.getElementById('tpl-msg').value,tplLink:document.getElementById('tpl-link').value};save();}
+function savePushDraft(){store.draft={pushRows,varCols,tplMsg:document.getElementById('tpl-msg').value,tplLink:document.getElementById('tpl-link').value,excelMode:pushRows.some(r=>r.msg!==undefined)};save();}
 function restorePushDraft(){
   if(!store.draft)return;const d=store.draft;
   pushRows=d.pushRows||[];varCols=d.varCols||[];
   document.getElementById('tpl-msg').value=d.tplMsg||'';
   document.getElementById('tpl-link').value=d.tplLink||'';
-  renderVarTags();renderPushTable();
+  renderVarTags();
+  if(d.excelMode||pushRows.some(r=>r.msg!==undefined))renderExcelRows();
+  else renderPushTable();
 }
 function renderContacts(){
   const tb=document.getElementById('contacts-tbody');
@@ -872,9 +975,9 @@ function clearHistory(){if(!store.history.length){toast('历史已为空','error
 function openTaskpack(){
   if(!pushRows.length){toast('请先选择收件人','error');return;}
   const link=normLink(document.getElementById('tpl-link').value);
-  const lines=pushRows.map((r,i)=>{const{msg}=renderMsg(r);
+  const lines=pushRows.map((r,i)=>{const msg=r.msg!==undefined?r.msg:renderMsg(r).msg;const rlink=r.link||link;
     const m=r.mobile?`（手机号 ${r.mobile}，优先按手机号精确匹配）`:'（未提供手机号，按姓名匹配）';
-    return `${i+1}. 收件人：${r.name}${m}\n   内容：${msg}${link?'\n   链接：'+link:''}`;});
+    return `${i+1}. 收件人：${r.name}${m}\n   内容：${msg}${rlink?'\n   链接：'+rlink:''}${r.img?'\n   图片：'+r.img:''}`;});
   document.getElementById('taskpack-content').textContent=
 `【钉钉批量推送任务】
 请通过钉钉单聊给以下同事逐个发送消息。发送前先匹配用户并向我确认最终名单，确认后逐条发送，完成后汇报每人结果并输出回填码。
