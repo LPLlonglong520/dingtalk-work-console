@@ -180,9 +180,13 @@ tr:hover td{background:#fafcff;}
           <div class="panel-head"><h2>📚 我的知识库</h2><span class="tag" id="knowledge-tag"></span></div>
           <div class="panel-body">
             <div class="filter-bar">
-              <div class="field"><label>关键词</label><input id="kf-kw" placeholder="库名/简介"></div>
+              <div class="field"><label>知识库名称</label><input id="kf-kw" placeholder="名称关键词"></div>
+              <div class="field"><label>创建时间从</label><input type="date" id="kf-start"></div>
+              <div class="field"><label>至</label><input type="date" id="kf-end"></div>
               <button class="btn btn-primary btn-sm" onclick="renderKnowledge()">筛选</button>
+              <button class="btn btn-ghost btn-sm" onclick="resetFilter('kf')">重置</button>
             </div>
+            <div class="hint" style="margin-bottom:10px;">仅展示 2024 年及以后创建的知识库（更早的已按需剔除）；创建人字段钉钉接口暂不提供。</div>
             <div style="overflow-x:auto;"><table>
               <thead><tr><th>知识库</th><th>简介</th><th>创建时间</th><th>操作</th></tr></thead>
               <tbody id="knowledge-tbody"></tbody>
@@ -204,9 +208,10 @@ tr:hover td{background:#fafcff;}
               <button class="btn btn-primary btn-sm" onclick="renderTodos()">筛选</button>
             </div>
             <div style="overflow-x:auto;"><table>
-              <thead><tr><th>标题</th><th>截止时间</th><th>优先级</th><th>状态</th></tr></thead>
+              <thead><tr><th>标题</th><th>截止时间</th><th>优先级</th><th>状态</th><th>操作</th></tr></thead>
               <tbody id="todo-tbody"></tbody>
             </table></div>
+            <div class="hint" style="margin-top:10px;margin-bottom:0;">数据自 2026-09-30 起记录；点击「钉钉打开」跳转到该待办的钉钉详情页，可直接操作（完成/修改）。</div>
           </div>
         </div>
       </section>
@@ -218,6 +223,7 @@ tr:hover td{background:#fafcff;}
           <div class="panel-head"><h2>🎙️ 钉钉 AI 听记</h2><span class="tag" id="minute-tag"></span></div>
           <div class="panel-body">
             <div class="filter-bar">
+              <div class="field"><label>类型</label><select id="mf-type"><option value="">全部</option><option value="call">语音通话</option><option value="meeting">会议速记</option></select></div>
               <div class="field"><label>开始日期</label><input type="date" id="mf-start"></div>
               <div class="field"><label>结束日期</label><input type="date" id="mf-end"></div>
               <div class="field"><label>关键词</label><input id="mf-kw" placeholder="主题"></div>
@@ -239,12 +245,14 @@ tr:hover td{background:#fafcff;}
           <div class="panel-head"><h2>📅 我的会议</h2><span class="tag" id="meeting-tag"></span></div>
           <div class="panel-body">
             <div class="filter-bar">
+              <div class="field"><label>组织者</label><select id="cf-org"><option value="">全部</option><option value="me">我是组织者</option></select></div>
               <div class="field"><label>开始日期</label><input type="date" id="cf-start"></div>
               <div class="field"><label>结束日期</label><input type="date" id="cf-end"></div>
               <div class="field"><label>关键词</label><input id="cf-kw" placeholder="主题/组织者/地点"></div>
               <button class="btn btn-primary btn-sm" onclick="renderMeetings()">筛选</button>
               <button class="btn btn-ghost btn-sm" onclick="resetFilter('cf')">重置</button>
             </div>
+            <div class="hint" style="margin-bottom:10px;">数据自 2026-05-01 起；点击会议行查看详情（参会人完整名单）。</div>
             <div style="overflow-x:auto;max-height:560px;overflow-y:auto;"><table>
               <thead><tr><th>时间</th><th>主题</th><th>组织者</th><th>参会人数</th><th>地点</th></tr></thead>
               <tbody id="meeting-tbody"></tbody>
@@ -264,9 +272,10 @@ tr:hover td{background:#fafcff;}
               <button class="btn btn-primary btn-sm" onclick="renderStars()">筛选</button>
             </div>
             <div style="overflow-x:auto;max-height:560px;overflow-y:auto;"><table>
-              <thead><tr><th>文档名</th><th>类型</th><th>收藏时间</th></tr></thead>
+              <thead><tr><th>文档名</th><th>类型</th><th>收藏时间</th><th>操作</th></tr></thead>
               <tbody id="star-tbody"></tbody>
             </table></div>
+            <div class="hint" style="margin-top:10px;margin-bottom:0;">点击「钉钉打开」查看文档详情（需已授权）；创建人字段钉钉接口暂不提供。</div>
           </div>
         </div>
       </section>
@@ -279,6 +288,17 @@ tr:hover td{background:#fafcff;}
           <div class="tab" data-tab="history" onclick="switchPushTab('history')">📋 发送历史</div>
         </div>
         <div id="ptab-compose">
+          <div class="panel">
+            <div class="panel-head"><h2>📖 推送配置步骤（以给每人发成绩为例）</h2></div>
+            <div class="panel-body" style="font-size:13px;line-height:2;">
+              <b>第 1 步·添加联系人</b>：切到「👥 联系人」标签 → 「＋ 新建」或「📥 批量导入」（格式：<code>姓名 | 手机号 | 部门 | 备注</code>，姓名和手机号必填）<br>
+              <b>第 2 步·选收件人</b>：回到本页点「从联系人选择」→ 勾选要发的人<br>
+              <b>第 3 步·加变量列</b>：点「＋ 添加变量」输入「成绩」→ 模板里就能用 <code>{成绩}</code> 占位<br>
+              <b>第 4 步·写模板</b>：文案模板填 <code>您好 {姓名}，本次考试成绩为 {成绩} 分，请查收。</code>（{姓名} 自动替换为各人姓名）<br>
+              <b>第 5 步·填每人成绩</b>：点「刷新预览」，在预览表格的「成绩」列给每人填各自的分数（个别特殊文案点「覆盖」单独写）<br>
+              <b>第 6 步·发送</b>：点「⚙️ 生成推送任务包」→ 复制 → 粘贴到<b>千问办公对话</b>发送 → 我逐人发送并把结果回填码给你 → 回填码粘贴到弹窗下方导入
+            </div>
+          </div>
           <div class="panel">
             <div class="panel-head">
               <h2>👥 收件人</h2>
@@ -364,6 +384,13 @@ tr:hover td{background:#fafcff;}
 </div>
 
 <!-- 弹窗 -->
+<div class="modal-mask" id="m-meeting"><div class="modal modal-sm">
+  <div class="modal-head"><h3 id="md-m-title">会议详情</h3><button class="modal-close" onclick="closeModal('m-meeting')">✕</button></div>
+  <div class="modal-body"><div class="detail-block" id="md-m-body" style="max-height:420px;"></div></div>
+  <div class="modal-foot"><span class="left-note">在钉钉客户端的日历中可对该会议进行操作</span>
+    <button class="btn btn-ghost" onclick="closeModal('m-meeting')">关闭</button></div>
+</div></div>
+
 <div class="modal-mask" id="m-pick"><div class="modal">
   <div class="modal-head"><h3>选择收件人</h3><button class="modal-close" onclick="closeModal('m-pick')">✕</button></div>
   <div class="modal-body">
@@ -553,15 +580,24 @@ function gotoPage(id){
 /* ================= 1 知识库 ================= */
 function renderKnowledge(){
   const d=store.data,kw=(document.getElementById('kf-kw').value||'').toLowerCase();
-  const list=(d.knowledge||[]).filter(k=>!kw||((k.name||'')+(k.description||'')).toLowerCase().includes(kw));
-  document.getElementById('knowledge-tag').textContent=`共 ${list.length} 个知识库`;
+  const start=document.getElementById('kf-start').value,end=document.getElementById('kf-end').value;
+  const list=(d.knowledge||[]).filter(k=>{
+    if(kw&&!((k.name||'')+(k.description||'')).toLowerCase().includes(kw))return false;
+    if(k.createTime){
+      const ds=new Date(k.createTime).toISOString().slice(0,10);
+      if(start&&ds<start)return false;
+      if(end&&ds>end)return false;
+    }
+    return true;
+  });
+  document.getElementById('knowledge-tag').textContent=`筛选 ${list.length} / 共 ${(d.knowledge||[]).length} 个知识库`;
   const tb=document.getElementById('knowledge-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="4"><div class="empty"><div class="big">📚</div>暂无数据</div></td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="4"><div class="empty"><div class="big">📚</div>暂无符合条件的数据</div></td></tr>';return;}
   tb.innerHTML=list.map(k=>`<tr>
     <td><b>${esc(k.name)}</b></td>
-    <td style="max-width:380px;">${esc(k.description||'—')}</td>
+    <td style="max-width:360px;">${esc(k.description||'—')}</td>
     <td>${k.createTime?fmtMs(k.createTime):'—'}</td>
-    <td>${k.url?`<a class="link-badge" href="${esc(k.url)}" target="_blank" title="${esc(k.url)}">打开知识库 ↗</a>`:'—'}</td>
+    <td>${k.url?`<a class="link-badge" href="${esc(k.url)}" target="_blank" title="${esc(k.url)}">打开 ↗</a>`:'—'}</td>
   </tr>`).join('');
 }
 
@@ -588,6 +624,7 @@ function renderTodos(){
   const tb=document.getElementById('todo-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="4"><div class="empty"><div class="big">✅</div>没有符合条件的待办</div></td></tr>';return;}
   const priName={10:'低',20:'中',30:'高',40:'紧急'};
+  const todoUrl=id=>`https://n.dingtalk.com/dingding/dd-todo/detail/index.html?taskId=${encodeURIComponent(id)}&bizTag=teambition#/detail`;
   tb.innerHTML=list.map(t=>{
     const p=t.priority||20;
     const priPill=p>=40?'pill-red':p>=30?'pill-orange':p<=10?'pill-gray':'pill-blue';
@@ -598,63 +635,89 @@ function renderTodos(){
     else{stPill='进行中';stCls='pill-blue';}
     return `<tr><td><b>${esc(t.title)}</b></td><td>${t.due?fmtMs(t.due):'—'}</td>
       <td><span class="pill ${priPill}">${priName[p]||p}</span></td>
-      <td><span class="pill ${stCls}">${stPill}</span></td></tr>`;
+      <td><span class="pill ${stCls}">${stPill}</span></td>
+      <td><a class="link-badge" href="${todoUrl(t.taskId)}" target="_blank">钉钉打开 ↗</a></td></tr>`;
   }).join('');
 }
 
 /* ================= 3 AI听记 ================= */
+function minuteType(t){return /^与.+的语音通话/.test(t||'')?'call':'meeting';}
 function renderMinutes(){
   const d=store.data,now=Date.now();
   const all=(d.minutes||[]).slice().sort((a,b)=>(b.startTime||0)-(a.startTime||0));
   const m30=all.filter(m=>m.startTime&&m.startTime>now-30*86400000);
+  const calls=all.filter(m=>minuteType(m.title)==='call').length;
   const totalDur=all.reduce((s,m)=>s+(m.duration||0),0);
   document.getElementById('minute-stats').innerHTML=`
     <div class="stat-card"><div class="label">听记总数</div><div class="value c-blue">${all.length}</div></div>
-    <div class="stat-card"><div class="label">近30天</div><div class="value c-green">${m30.length}</div></div>
-    <div class="stat-card"><div class="label">累计时长</div><div class="value c-orange">${fmtDur(totalDur)}</div></div>`;
+    <div class="stat-card"><div class="label">语音通话</div><div class="value c-green">${calls}</div></div>
+    <div class="stat-card"><div class="label">会议速记</div><div class="value c-orange">${all.length-calls}</div></div>
+    <div class="stat-card"><div class="label">累计时长</div><div class="value c-gray">${fmtDur(totalDur)}</div></div>`;
+  const type=document.getElementById('mf-type').value;
   const start=document.getElementById('mf-start').value,end=document.getElementById('mf-end').value,kw=(document.getElementById('mf-kw').value||'').toLowerCase();
   let list=all;
+  if(type)list=list.filter(m=>minuteType(m.title)===type);
   if(start)list=list.filter(m=>m.startTime&&m.startTime>=new Date(start+'T00:00').getTime());
   if(end)list=list.filter(m=>m.startTime&&m.startTime<=new Date(end+'T23:59').getTime());
   if(kw)list=list.filter(m=>(m.title||'').toLowerCase().includes(kw));
-  document.getElementById('minute-tag').textContent=`筛选结果 ${list.length} 条 / 共 ${all.length} 条`;
+  document.getElementById('minute-tag').textContent=`筛选 ${list.length} / 共 ${all.length} 条`;
   const tb=document.getElementById('minute-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="4"><div class="empty"><div class="big">🎙️</div>没有符合条件的听记</div></td></tr>';return;}
-  tb.innerHTML=list.map(m=>`<tr>
+  if(!list.length){tb.innerHTML='<tr><td colspan="5"><div class="empty"><div class="big">🎙️</div>没有符合条件的听记</div></td></tr>';return;}
+  tb.innerHTML=list.map(m=>{
+    const t=minuteType(m.title);
+    return `<tr>
     <td style="white-space:nowrap;">${m.startTime?fmtMs(m.startTime):'—'}</td>
     <td><b>${esc(m.title)}</b></td>
+    <td><span class="pill ${t==='call'?'pill-green':'pill-blue'}">${t==='call'?'语音通话':'会议速记'}</span></td>
     <td style="white-space:nowrap;">${fmtDur(m.duration)}</td>
     <td>${m.url?`<a class="link-badge" href="${esc(m.url)}" target="_blank">查看 ↗</a>`:''}</td>
-  </tr>`).join('');
+  </tr>`;}).join('');
 }
 
 /* ================= 4 会议 ================= */
+const MY_NAME='刘佩龙';
 function renderMeetings(){
   const d=store.data,now=Date.now();
   const all=(d.meetings||[]).slice().sort((a,b)=>(b.start||'').localeCompare(a.start||''));
   const upcoming=all.filter(e=>e.start&&new Date(e.start).getTime()>=now);
   const past=all.filter(e=>e.start&&new Date(e.start).getTime()<now);
+  const mine=all.filter(e=>e.organizer===MY_NAME);
   let totalH=0;all.forEach(e=>{if(e.start&&e.end)totalH+=(new Date(e.end)-new Date(e.start))/3600000;});
   document.getElementById('meeting-stats').innerHTML=`
-    <div class="stat-card"><div class="label">会议总数（同步范围）</div><div class="value c-blue">${all.length}</div></div>
-    <div class="stat-card"><div class="label">即将到来</div><div class="value c-green">${upcoming.length}</div></div>
-    <div class="stat-card"><div class="label">累计时长</div><div class="value c-orange">${totalH.toFixed(1)} 小时</div></div>
-    <div class="stat-card"><div class="label">已结束</div><div class="value c-gray">${past.length}</div></div>`;
+    <div class="stat-card"><div class="label">会议总数</div><div class="value c-blue">${all.length}</div></div>
+    <div class="stat-card"><div class="label">我组织的</div><div class="value c-green">${mine.length}</div></div>
+    <div class="stat-card"><div class="label">即将到来</div><div class="value c-orange">${upcoming.length}</div></div>
+    <div class="stat-card"><div class="label">累计时长</div><div class="value c-gray">${totalH.toFixed(1)} 小时</div></div>`;
+  const org=document.getElementById('cf-org').value;
   const start=document.getElementById('cf-start').value,end=document.getElementById('cf-end').value,kw=(document.getElementById('cf-kw').value||'').toLowerCase();
   let list=all;
+  if(org==='me')list=list.filter(e=>e.organizer===MY_NAME);
   if(start)list=list.filter(e=>(e.start||'')>=start);
   if(end)list=list.filter(e=>(e.start||'')<=(end+'T23:59'));
   if(kw)list=list.filter(e=>((e.title||'')+(e.organizer||'')+(e.location||'')).toLowerCase().includes(kw));
-  document.getElementById('meeting-tag').textContent=`筛选结果 ${list.length} 场`;
+  document.getElementById('meeting-tag').textContent=`筛选 ${list.length} / 共 ${all.length} 场`;
   const tb=document.getElementById('meeting-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="5"><div class="empty"><div class="big">📅</div>没有符合条件的会议</div></td></tr>';return;}
-  tb.innerHTML=list.map(e=>{
+  tb.innerHTML=list.map((e,i)=>{
     const s=e.start?e.start.replace('T',' ').slice(0,16):'—';
     const dur=e.start&&e.end?fmtDur(new Date(e.end)-new Date(e.start)):'—';
-    return `<tr><td style="white-space:nowrap;">${esc(s)}<div style="font-size:11px;color:var(--dt-text-sub);">${dur}</div></td>
-    <td><b>${esc(e.title)}</b></td><td>${esc(e.organizer||'—')}</td>
+    const idx=all.indexOf(e);
+    return `<tr style="cursor:pointer;" onclick="showMeeting(${idx})"><td style="white-space:nowrap;">${esc(s)}<div style="font-size:11px;color:var(--dt-text-sub);">${dur}</div></td>
+    <td><b>${esc(e.title)}</b></td><td>${esc(e.organizer||'—')}${e.organizer===MY_NAME?'<span class="pill pill-green" style="margin-left:4px;">我</span>':''}</td>
     <td>${(e.attendees||[]).length}</td><td>${esc(e.location||'—')}</td></tr>`;
   }).join('');
+}
+let curMeeting=null;
+function showMeeting(idx){
+  const e=(store.data.meetings||[])[idx];if(!e)return;
+  curMeeting=e;
+  const s=e.start?e.start.replace('T',' ').slice(0,16):'—';
+  const en=e.end?e.end.replace('T',' ').slice(0,16):'—';
+  const dur=e.start&&e.end?fmtDur(new Date(e.end)-new Date(e.start)):'—';
+  document.getElementById('md-m-title').textContent=e.title||'(无标题)';
+  document.getElementById('md-m-body').innerHTML=
+    `<b>时间</b>：${esc(s)} ~ ${esc(en)}（${esc(dur)}）\n<b>组织者</b>：${esc(e.organizer||'—')}\n<b>地点</b>：${esc(e.location||'—')}\n<b>参会人</b>（${(e.attendees||[]).length}人）：\n${esc((e.attendees||[]).join('、')||'（无）')}`;
+  openModal('m-meeting');
 }
 
 /* ================= 5 收藏文档 ================= */
@@ -666,12 +729,13 @@ function renderStars(){
   if(kw)list=list.filter(s=>(s.name||'').toLowerCase().includes(kw));
   document.getElementById('star-tag').textContent=`共 ${list.length} 篇`;
   const tb=document.getElementById('star-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="3"><div class="empty"><div class="big">⭐</div>暂无收藏</div></td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="4"><div class="empty"><div class="big">⭐</div>暂无收藏</div></td></tr>';return;}
   const typeName={ALIDOC:'在线文档',FOLDER:'文件夹',AXLS:'表格',ABLE:'AI表格',AMIND:'思维导图'};
   tb.innerHTML=list.map(s=>`<tr>
     <td><b>${esc(s.name)}</b></td>
     <td><span class="pill pill-blue">${typeName[s.type]||esc(s.type)}</span></td>
-    <td>${s.createTime?esc(String(s.createTime).slice(0,16).replace('T',' ')):'—'}</td></tr>`).join('');
+    <td>${s.createTime?esc(String(s.createTime).slice(0,16).replace('T',' ')):'—'}</td>
+    <td>${s.url?`<a class="link-badge" href="${esc(s.url)}" target="_blank">钉钉打开 ↗</a>`:''}</td></tr>`).join('');
 }
 
 /* ================= 6 日常推送 ================= */
@@ -788,9 +852,12 @@ function confirmImportContacts(){
 }
 function exportContacts(){
   if(!store.contacts.length){toast('暂无联系人','error');return;}
-  const text=store.contacts.map(c=>[c.name,c.mobile,c.dept,c.note].filter(x=>x!==undefined).join(' | ')).join('\n');
-  const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='联系人名单.txt';a.click();URL.revokeObjectURL(a.href);
+  // Excel 兼容 CSV（UTF-8 BOM）
+  const csv='\uFEFF姓名,手机号,部门,备注\n'+store.contacts.map(c=>
+    [c.name,c.mobile,c.dept,c.note].map(x=>'"'+String(x||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='联系人名单.csv';a.click();URL.revokeObjectURL(a.href);
+  toast('已导出 CSV（Excel 可直接打开）','success');
 }
 function renderHistory(){
   const tb=document.getElementById('history-tbody');
@@ -915,8 +982,9 @@ function renderAnalysis(){
 
 /* ================= 渲染入口 ================= */
 function resetFilter(prefix){
-  if(prefix==='mf'){['mf-start','mf-end','mf-kw'].forEach(id=>document.getElementById(id).value='');renderMinutes();}
-  if(prefix==='cf'){['cf-start','cf-end','cf-kw'].forEach(id=>document.getElementById(id).value='');renderMeetings();}
+  if(prefix==='mf'){['mf-start','mf-end','mf-kw'].forEach(id=>document.getElementById(id).value='');document.getElementById('mf-type').value='';renderMinutes();}
+  if(prefix==='cf'){['cf-start','cf-end','cf-kw'].forEach(id=>document.getElementById(id).value='');document.getElementById('cf-org').value='';renderMeetings();}
+  if(prefix==='kf'){['kf-kw','kf-start','kf-end'].forEach(id=>document.getElementById(id).value='');renderKnowledge();}
 }
 function renderAll(){renderNav();const active=document.querySelector('.page.active');if(active)gotoPage(active.id.replace('page-',''));}
 

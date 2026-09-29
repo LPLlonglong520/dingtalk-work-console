@@ -37,24 +37,33 @@ function encrypt(obj, password) {
 }
 
 // ---------- 归一化各模块 ----------
+// 配置：数据起点
+const KNOWLEDGE_MIN_TS = new Date('2024-01-01').getTime();   // 知识库：去掉2021-2023
+const TODO_MIN_DUE = new Date('2026-09-30T00:00:00+08:00').getTime(); // 待办：2026-09-30起
+
 function normKnowledge() {
   const j = tryRead(path.join(RAW, 'knowledge.json'));
   if (!j) return [];
   const spaces = ((j.data || {}).spaces) || [];
-  return spaces.map(s => ({
-    name: s.name, workspaceId: s.workspaceId, url: s.url,
-    description: s.description || '', createTime: s.createTime || null
-  }));
+  return spaces
+    .filter(s => !s.createTime || s.createTime >= KNOWLEDGE_MIN_TS) // 无时间保留，2021-2023剔除
+    .map(s => ({
+      name: s.name, workspaceId: s.workspaceId, url: s.url,
+      description: s.description || '', createTime: s.createTime || null,
+      creator: '' // 钉钉接口不提供知识库创建人
+    }));
 }
 function normTodos() {
   const j = tryRead(path.join(RAW, 'todos.json'));
   if (!j) return [];
   const tasks = ((j.data || {}).tasks) || [];
-  return tasks.map(t => ({
-    taskId: t.taskId, title: t.title,
-    due: t.planFinishDate || null, priority: t.priority || 20,
-    isDone: t.isDone === undefined ? false : !!t.isDone
-  }));
+  return tasks
+    .filter(t => !t.planFinishDate || t.planFinishDate >= TODO_MIN_DUE) // 数据从2026-09-30起
+    .map(t => ({
+      taskId: t.taskId, title: t.title,
+      due: t.planFinishDate || null, priority: t.priority || 20,
+      isDone: t.isDone === undefined ? false : !!t.isDone
+    }));
 }
 function normMinutes() {
   const j = tryRead(path.join(RAW, 'minutes.json'));
@@ -66,18 +75,31 @@ function normMinutes() {
   }));
 }
 function normMeetings() {
-  const j = tryRead(path.join(RAW, 'meetings.json'));
-  if (!j) return [];
-  const evs = ((j.result || {}).events) || [];
-  // start/end 兼容两种形态：对象 {dateTime:...} 或字符串 "2026-08-31T14:00:00+08:00"
+  // meetings.json = 历史全量（2026-05-01 起，固定基础）
+  // meetings_recent.json = 每日增量（近2周+未来1周），与历史合并按 title+start 去重
+  const collect = (file) => {
+    const j = tryRead(path.join(RAW, file));
+    if (!j) return [];
+    return ((j.result || {}).events) || [];
+  };
+  const evs = collect('meetings.json').concat(collect('meetings_recent.json'));
   const dt = (v) => (v && typeof v === 'object') ? (v.dateTime || null) : (v || null);
-  return evs.map(e => ({
-    id: e.id, title: e.summary || e.title || '(无标题)',
-    start: dt(e.start), end: dt(e.end),
-    organizer: (e.organizer && (typeof e.organizer === 'object' ? e.organizer.displayName : e.organizer)) || '',
-    attendees: (e.attendees || []).filter(a => a && a !== true).map(a => typeof a === 'object' ? a.displayName : a),
-    location: e.location || ''
-  }));
+  const seen = new Set();
+  const out = [];
+  for (const e of evs) {
+    const start = dt(e.start);
+    const key = (e.summary || e.title || '') + '|' + (start || '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      id: e.id || '', title: e.summary || e.title || '(无标题)',
+      start, end: dt(e.end),
+      organizer: (e.organizer && (typeof e.organizer === 'object' ? e.organizer.displayName : e.organizer)) || '',
+      attendees: (e.attendees || []).filter(a => a && a !== true).map(a => typeof a === 'object' ? a.displayName : a),
+      location: e.location || ''
+    });
+  }
+  return out;
 }
 function normStars() {
   // 合并多页收藏（stars.json 为第一页，stars_p2/p3... 为续页）
@@ -88,7 +110,9 @@ function normStars() {
     if (j && j.data && Array.isArray(j.data.items)) items.push(...j.data.items);
   }
   return items.map(i => ({
-    name: i.name, nodeId: i.nodeId, type: i.type || '', createTime: i.createTime || null
+    name: i.name, nodeId: i.nodeId, type: i.type || '', createTime: i.createTime || null,
+    creator: '', // 钉钉接口不提供收藏文档创建人
+    url: 'https://alidocs.dingtalk.com/i/nodes/' + i.nodeId
   }));
 }
 

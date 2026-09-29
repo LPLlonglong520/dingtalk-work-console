@@ -9,7 +9,7 @@
 ### 第 1 步：确定时间窗口
 
 用 `date` 命令获取当前日期，计算：
-- 会议同步窗口 = `今天-30天` 至 `今天+7天`（ISO 格式如 `2026-09-29T00:00:00+08:00`）
+- 会议同步窗口 = **2026-05-01**（固定起始）至 `今天+7天`（ISO 格式如 `2026-09-29T00:00:00+08:00`）
 
 ### 第 2 步：拉取 5 类数据（每条单独执行，输出到 data/raw/）
 
@@ -23,14 +23,18 @@ dws todo +get-related-tasks --format json --output "C:\Users\龙仔\.qwenworkcn\
 dws minutes +list-all --page-all --format json --output "C:\Users\龙仔\.qwenworkcn\workspace\mudfpjlrrllypy2z\push-platform\data\raw\minutes.json"
 ```
 
-**会议数据特殊处理**（calendar 不支持 --output，用 --jq 精简投影后把返回结果写入文件）：
+**会议数据特殊处理**（每日只拉增量，历史全量已建库）：
+
+历史库 data/raw/meetings.json 已包含 2026-05-01 至今的全量会议（2026-09-29 建库），不要覆盖它。每日拉增量窗口 = `今天-14天` 至 `今天+7天`：
 
 ```
-dws calendar event list --start "<30天前>T00:00:00+08:00" --end "<7天后>T23:59:59+08:00" --format json --jq "[.result.events[] | {id, summary, start: .start.dateTime, end: .end.dateTime, organizer: .organizer.displayName, attendees: [.attendees[]? | select(.self != true) | .displayName], location}]"
+dws calendar event list --start "<14天前>T00:00:00+08:00" --end "<7天后>T23:59:59+08:00" --limit 100 --format json --jq "[.result.events[] | {id, summary, start: .start.dateTime, end: .end.dateTime, organizer: .organizer.displayName, attendees: [.attendees[]? | select(.self != true) | .displayName], location}]"
 ```
 
-把返回的 JSON 数组用 python/node 包一层结构写入 `data/raw/meetings.json`：
+把返回的 JSON 数组用 python 包装写入 `data/raw/meetings_recent.json`：
 `{"result": {"events": <返回的数组>, "hasMore": false}, "success": true}`
+
+pack-data.js 会自动把 meetings.json（历史）与 meetings_recent.json（增量）按「标题+开始时间」合并去重。
 
 **收藏文档分页拉取**（star-list 每页最多 20 条，需按 nextCursor 翻页直到 hasMore=false）：
 
