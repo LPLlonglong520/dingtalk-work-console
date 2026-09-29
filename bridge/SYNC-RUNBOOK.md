@@ -56,10 +56,12 @@ node pack-data.js
 cd "C:\Users\龙仔\.qwenworkcn\workspace\mudfpjlrrllypy2z\push-platform"
 git add data/latest.enc
 git -c user.name="LPLlonglong520" -c user.email="1412604317@qq.com" commit -m "data: 每日同步 <日期>"
-git push origin main
+git -c credential.helper= push origin main
 ```
 
-**注意**：只 add `data/latest.enc`，不要 `git add -A`（data/raw/ 和 bridge/secret.txt 已被 .gitignore 排除，但仍避免误提交）。
+**注意 1**：只 add `data/latest.enc`，不要 `git add -A`（data/raw/ 和 bridge/secret.txt 已被 .gitignore 排除，但仍避免误提交）。
+
+**注意 2**：push 必须带 `-c credential.helper=`（禁用凭据助手，否则可能挂起等待交互输入）。如 push 超时挂起，先 `taskkill /IM git.exe /F` 清理进程再重试。
 
 ### 第 5 步：汇报
 
