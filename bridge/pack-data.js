@@ -69,11 +69,13 @@ function normMeetings() {
   const j = tryRead(path.join(RAW, 'meetings.json'));
   if (!j) return [];
   const evs = ((j.result || {}).events) || [];
+  // start/end 兼容两种形态：对象 {dateTime:...} 或字符串 "2026-08-31T14:00:00+08:00"
+  const dt = (v) => (v && typeof v === 'object') ? (v.dateTime || null) : (v || null);
   return evs.map(e => ({
-    id: e.id, title: e.summary || '(无标题)',
-    start: (e.start && e.start.dateTime) || null, end: (e.end && e.end.dateTime) || null,
-    organizer: (e.organizer && e.organizer.displayName) || '',
-    attendees: (e.attendees || []).filter(a => !a.self).map(a => a.displayName),
+    id: e.id, title: e.summary || e.title || '(无标题)',
+    start: dt(e.start), end: dt(e.end),
+    organizer: (e.organizer && (typeof e.organizer === 'object' ? e.organizer.displayName : e.organizer)) || '',
+    attendees: (e.attendees || []).filter(a => a && a !== true).map(a => typeof a === 'object' ? a.displayName : a),
     location: e.location || ''
   }));
 }
