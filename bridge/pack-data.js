@@ -67,12 +67,20 @@ function normTodos() {
 }
 function normMinutes() {
   const j = tryRead(path.join(RAW, 'minutes.json'));
+  const durMap = tryRead(path.join(RAW, 'durations.json')) || {};
   if (!j) return [];
   const arr = ((j.data || {}).minutes) || [];
-  return arr.map(m => ({
-    taskUuid: m.taskUuid, title: m.title,
-    startTime: m.startTime || null, duration: m.duration || null, url: m.url || ''
-  }));
+  return arr.map(m => {
+    // 时长优先级：列表计算 > durations.json 补充表 > null
+    let duration = null;
+    if (m.duration) duration = m.duration;
+    else if (m.startTime && m.endTime) duration = m.endTime - m.startTime;
+    else if (durMap[m.taskUuid]) duration = durMap[m.taskUuid];
+    return {
+      taskUuid: m.taskUuid, title: m.title,
+      startTime: m.startTime || null, duration, url: m.url || ''
+    };
+  });
 }
 function normMeetings() {
   // meetings.json = 历史全量（2026-05-01 起，固定基础）
